@@ -862,6 +862,11 @@
       const dot = document.getElementById('status-dot');
       const text = document.getElementById('status-text');
       
+      if (!btn || !dot || !text) {
+        console.error('Elements not found:', { btn, dot, text });
+        return;
+      }
+      
       btn.disabled = true;
       dot.className = 'status-dot checking';
       text.className = 'status-text checking';
@@ -869,21 +874,39 @@
       
       try {
         const res = await fetchWithAuth('/status?refresh=true');
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         const data = await res.json();
+        console.log('Status response:', data);
         
-        const isOnline = data.printer?.connected;
-        dot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
-        text.className = `status-text ${isOnline ? 'online' : 'offline'}`;
-        text.textContent = isOnline ? 'Connectée' : 'Hors ligne';
+        const isOnline = data.printer?.connected === true;
+        const statusClass = isOnline ? 'online' : 'offline';
+        const statusText = isOnline ? 'Connectée' : (data.printer?.message || 'Hors ligne');
         
-        document.getElementById('printer-ip').textContent = data.printer?.ip || '—';
-        document.getElementById('printer-port').textContent = data.printer?.port || '—';
-        document.getElementById('printer-protocol').textContent = data.printer?.protocol?.toUpperCase() || '—';
-        document.getElementById('last-check').textContent = formatTime(data.printer?.lastCheck);
-        document.getElementById('uptime').textContent = formatUptime(data.service?.uptime || 0);
-        document.getElementById('node-version').textContent = data.service?.nodeVersion || '—';
+        dot.className = `status-dot ${statusClass}`;
+        text.className = `status-text ${statusClass}`;
+        text.textContent = statusText;
+        
+        // Update printer info
+        const printerIp = document.getElementById('printer-ip');
+        const printerPort = document.getElementById('printer-port');
+        const printerProtocol = document.getElementById('printer-protocol');
+        const lastCheck = document.getElementById('last-check');
+        const uptime = document.getElementById('uptime');
+        const nodeVersion = document.getElementById('node-version');
+        
+        if (printerIp) printerIp.textContent = data.printer?.ip || '—';
+        if (printerPort) printerPort.textContent = data.printer?.port || '—';
+        if (printerProtocol) printerProtocol.textContent = data.printer?.protocol?.toUpperCase() || '—';
+        if (lastCheck) lastCheck.textContent = formatTime(data.printer?.lastCheck);
+        if (uptime) uptime.textContent = formatUptime(data.service?.uptime || 0);
+        if (nodeVersion) nodeVersion.textContent = data.service?.nodeVersion || '—';
         
       } catch (err) {
+        console.error('Status check failed:', err);
         dot.className = 'status-dot offline';
         text.className = 'status-text offline';
         text.textContent = 'Erreur';
