@@ -171,6 +171,16 @@ const checkPrinterStatus = async (forceCheck = false) => {
   const now = Date.now();
   const cacheAge = lastPrinterStatus.lastCheck ? now - lastPrinterStatus.lastCheck : Infinity;
   
+  // Si pas d'IP configurée, retourner un statut "non configuré"
+  if (!PRINTER_IP || PRINTER_IP.trim() === '') {
+    return {
+      connected: false,
+      configured: false,
+      message: 'Aucune imprimante configurée. Utilisez l\'onglet Configuration pour scanner et sélectionner une imprimante.',
+      lastCheck: now
+    };
+  }
+  
   if (!forceCheck && cacheAge < 10000 && lastPrinterStatus.lastCheck) {
     return lastPrinterStatus;
   }
@@ -180,12 +190,14 @@ const checkPrinterStatus = async (forceCheck = false) => {
     const result = await printerClient.testConnection();
     lastPrinterStatus = {
       ...result,
+      configured: true,
       lastCheck: now,
       cached: false
     };
   } catch (error) {
     lastPrinterStatus = {
       connected: false,
+      configured: true,
       error: error.message,
       lastCheck: now,
       cached: false
