@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freemen Printer Proxy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.1);
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+    }
+    
+    .logo svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+    
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+    
+    /* Cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Status Card */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.online { background: var(--success); box-shadow: 0 0 12px var(--success); }
+    .status-dot.offline { background: var(--danger); box-shadow: 0 0 12px var(--danger); animation: none; }
+    .status-dot.checking { background: var(--warning); box-shadow: 0 0 12px var(--warning); }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .status-text {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    
+    .status-text.online { color: var(--success); }
+    .status-text.offline { color: var(--danger); }
+    .status-text.checking { color: var(--warning); }
+    
+    .printer-info {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+    
+    .info-label { color: var(--text-muted); }
+    .info-value { font-weight: 500; font-family: 'SF Mono', monospace; }
+    
+    /* Stats */
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background: #475569;
+    }
+    
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    /* Queue */
+    .queue-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .queue-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    
+    .queue-empty svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .queue-item:last-child { margin-bottom: 0; }
+    
+    .queue-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .queue-icon.pending { background: var(--warning-bg); color: var(--warning); }
+    .queue-icon.printing { background: var(--primary); color: white; }
+    .queue-icon.done { background: var(--success-bg); color: var(--success); }
+    .queue-icon.error { background: var(--danger-bg); color: var(--danger); }
+    
+    .queue-icon svg { width: 20px; height: 20px; }
+    
+    .queue-info { flex: 1; min-width: 0; }
+    .queue-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-meta { font-size: 12px; color: var(--text-muted); }
+    
+    .queue-status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    
+    .queue-status.pending { background: var(--warning-bg); color: var(--warning); }
+    .queue-status.printing { background: rgba(59, 130, 246, 0.2); color: var(--primary); }
+    .queue-status.done { background: var(--success-bg); color: var(--success); }
+    .queue-status.error { background: var(--danger-bg); color: var(--danger); }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: var(--success); color: white; }
+    .toast.error { background: var(--danger); color: white; }
+    .toast.warning { background: var(--warning); color: #1e293b; }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .tab:hover { color: var(--text); background: var(--surface-hover); }
+    .tab.active { background: var(--primary); color: white; }
+    .tab svg { width: 18px; height: 18px; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Config Panel */
+    .config-section {
+      margin-bottom: 24px;
+    }
+    
+    .config-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .input-wrapper {
+      flex: 1;
+    }
+    
+    .input-wrapper label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    
+    .input-wrapper input, .input-wrapper select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'SF Mono', monospace;
+      transition: border-color 0.2s;
+    }
+    
+    .input-wrapper input:focus, .input-wrapper select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .input-wrapper input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+    
+    /* Printer Cards */
+    .printer-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    
+    .printer-card:hover {
+      border-color: var(--primary);
+    }
+    
+    .printer-card.active {
+      border-color: var(--success);
+      background: var(--success-bg);
+    }
+    
+    .printer-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--surface-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .printer-icon svg { width: 24px; height: 24px; color: var(--text-muted); }
+    .printer-card.active .printer-icon { background: var(--success); }
+    .printer-card.active .printer-icon svg { color: white; }
+    
+    .printer-info { flex: 1; min-width: 0; }
+    .printer-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+    .printer-details { font-size: 13px; color: var(--text-muted); }
+    .printer-model { 
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--primary);
+      color: white;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+    
+    .printer-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .btn-icon:hover { background: var(--surface-hover); color: var(--text); }
+    .btn-icon.danger:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+    .btn-icon svg { width: 18px; height: 18px; }
+    
+    /* Scan progress */
+    .scan-progress {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .scan-progress-bar {
+      height: 6px;
+      background: var(--surface-hover);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+    
+    .scan-progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    
+    .scan-status { font-size: 14px; color: var(--text-muted); }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    /* Model badge */
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--surface-hover);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text);
+    }
+    
+    .model-badge.detected { background: var(--success-bg); color: var(--success); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="https://freemen.solutions" target="_blank" class="logo" title="Freemen Solutions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+      </a>
+      <a href="https://freemen.solutions" target="_blank" style="text-decoration: none;"><h1>Freemen Printer Proxy</h1></a>
+      <p class="subtitle" id="subtitle">Brother QL • Gestion d'étiquettes</p>
+    </header>
+    
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Dashboard
+      </button>
+      <button class="tab" data-tab="config" onclick="switchTab('config')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Configuration
+      </button>
+    </div>
+    
+    <!-- Dashboard Tab -->
+    <div class="tab-content active" id="tab-dashboard">
+    <div class="grid">
+      <!-- Status Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Statut Imprimante</span>
+          <button class="btn btn-secondary" onclick="refreshStatus()" id="refresh-btn" style="padding: 8px 16px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="status-indicator">
+          <div class="status-dot checking" id="status-dot"></div>
+          <span class="status-text checking" id="status-text">Vérification...</span>
+        </div>
+        <div class="printer-info">
+          <div class="info-row">
+            <span class="info-label">Adresse IP</span>
+            <span class="info-value" id="printer-ip">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Port</span>
+            <span class="info-value" id="printer-port">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Protocole</span>
+            <span class="info-value" id="printer-protocol">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Dernière vérification</span>
+            <span class="info-value" id="last-check">—</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stats Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Statistiques</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div style="text-align: center;">
+            <div class="stat-value" id="jobs-today">0</div>
+            <div class="stat-label">Aujourd'hui</div>
+          </div>
+          <div style="text-align: center;">
+            <div class="stat-value" id="jobs-30days">0</div>
+            <div class="stat-label">30 jours</div>
+          </div>
+          <div style="text-align: center;">
+            <div class="stat-value" id="jobs-total">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+        </div>
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Impressions (7 derniers jours)</div>
+          <div id="chart-container" style="display: flex; align-items: flex-end; gap: 8px; height: 80px;">
+            <!-- Chart bars will be inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <span class="card-title">Actions</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="printTest()" id="test-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span>Test d'impression</span>
+        </button>
+        <button class="btn btn-secondary" onclick="clearQueue()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Vider la file</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Queue -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">File d'attente</span>
+        <span style="font-size: 13px; color: var(--text-muted);" id="queue-count">0 jobs</span>
+      </div>
+      <div class="queue-list" id="queue-list">
+        <div class="queue-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <div>Aucun job en attente</div>
+        </div>
+      </div>
+    </div>
+    </div><!-- End Dashboard Tab -->
+    
+    <!-- Configuration Tab -->
+    <div class="tab-content" id="tab-config">
+      <div class="grid">
+        <!-- Manual Config Card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Configuration manuelle</span>
+          </div>
+          <div class="config-section">
+            <div class="input-group">
+              <div class="input-wrapper" style="flex: 2;">
+                <label>Adresse IP</label>
+                <input type="text" id="manual-ip" placeholder="192.168.1.100" />
+              </div>
+              <div class="input-wrapper" style="flex: 1;">
+                <label>Port</label>
+                <input type="number" id="manual-port" value="9100" />
+              </div>
+            </div>
+            <div class="input-group">
+              <div class="input-wrapper">
+                <label>Nom (optionnel)</label>
+                <input type="text" id="manual-name" placeholder="Mon imprimante" />
+              </div>
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+              <button class="btn btn-secondary" onclick="testManualPrinter()" id="test-manual-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Tester
+              </button>
+              <button class="btn btn-primary" onclick="setManualPrinter()" id="set-manual-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Configurer
+              </button>
+            </div>
+            <div id="test-result" style="margin-top: 16px; display: none;"></div>
+          </div>
+        </div>
+        
+        <!-- Network Scan Card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Scanner le réseau</span>
+          </div>
+          <div class="config-section">
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+              Rechercher automatiquement les imprimantes Brother sur votre réseau local.
+            </p>
+            <div class="actions">
+              <button class="btn btn-secondary" onclick="quickScan()" id="quick-scan-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                Scan rapide
+              </button>
+              <button class="btn btn-primary" onclick="fullScan()" id="full-scan-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+                Scan complet
+              </button>
+            </div>
+            <div id="scan-progress" style="margin-top: 16px; display: none;">
+              <div class="scan-progress">
+                <div class="spinner" style="margin: 0 auto;"></div>
+                <div class="scan-progress-bar">
+                  <div class="scan-progress-fill" id="scan-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="scan-status" id="scan-status">Scan en cours...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Discovered Printers -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <span class="card-title">Imprimantes découvertes</span>
+          <span style="font-size: 13px; color: var(--text-muted);" id="discovered-count">0 trouvées</span>
+        </div>
+        <div id="discovered-printers">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <div>Lancez un scan pour découvrir les imprimantes</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Saved Printers -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <span class="card-title">Imprimantes enregistrées</span>
+        </div>
+        <div id="saved-printers">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            </svg>
+            <div>Aucune imprimante enregistrée</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Compatible Models Reference -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <span class="card-title">Modèles compatibles</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;" id="compatible-models">
+          <!-- Will be populated by JS -->
+        </div>
+      </div>
+    </div><!-- End Config Tab -->
+    
+    <footer class="footer">
+      <p>Freemen Printer Proxy v1.0.0 • Propulsé par <a href="https://freemen.solutions">Freemen Solutions</a></p>
+    </footer>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+  
+  <script>
+    const API_KEY = localStorage.getItem('apiKey') || '';
+    let jobsToday = 0;
+    let queue = [];
+    
+    // Prompt for API key if not set
+    if (!API_KEY) {
+      const key = prompt('Entrez votre clé API:');
+      if (key) {
+        localStorage.setItem('apiKey', key);
+        location.reload();
+      }
+    }
+    
+    async function fetchWithAuth(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'X-API-Key': API_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    function formatUptime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      if (h > 24) {
+        const d = Math.floor(h / 24);
+        return `${d}j ${h % 24}h`;
+      }
+      return `${h}h ${m}m`;
+    }
+    
+    function formatTime(isoString) {
+      if (!isoString) return '—';
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    
+    async function refreshStatus() {
+      const btn = document.getElementById('refresh-btn');
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      
+      btn.disabled = true;
+      dot.className = 'status-dot checking';
+      text.className = 'status-text checking';
+      text.textContent = 'Vérification...';
+      
+      try {
+        const res = await fetchWithAuth('/status?refresh=true');
+        const data = await res.json();
+        
+        const isOnline = data.printer?.connected;
+        dot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+        text.className = `status-text ${isOnline ? 'online' : 'offline'}`;
+        text.textContent = isOnline ? 'Connectée' : 'Hors ligne';
+        
+        document.getElementById('printer-ip').textContent = data.printer?.ip || '—';
+        document.getElementById('printer-port').textContent = data.printer?.port || '—';
+        document.getElementById('printer-protocol').textContent = data.printer?.protocol?.toUpperCase() || '—';
+        document.getElementById('last-check').textContent = formatTime(data.printer?.lastCheck);
+        document.getElementById('uptime').textContent = formatUptime(data.service?.uptime || 0);
+        document.getElementById('node-version').textContent = data.service?.nodeVersion || '—';
+        
+      } catch (err) {
+        dot.className = 'status-dot offline';
+        text.className = 'status-text offline';
+        text.textContent = 'Erreur';
+        showToast('Erreur de connexion au proxy', 'error');
+      }
+      
+      btn.disabled = false;
+    }
+    
+    async function printTest() {
+      const btn = document.getElementById('test-btn');
+      const originalContent = btn.innerHTML;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div><span>Impression...</span>';
+      
+      try {
+        const res = await fetchWithAuth('/print/test', {
+          method: 'POST',
+          body: JSON.stringify({ labelSize: 'standard' })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          showToast('Test envoyé à l\'imprimante!', 'success');
+          jobsToday++;
+          document.getElementById('jobs-today').textContent = jobsToday;
+          addToQueue({
+            id: data.jobId || `job_${Date.now()}`,
+            title: 'Test d\'impression',
+            type: 'test',
+            status: 'done',
+            time: new Date()
+          });
+        } else {
+          showToast(data.error || 'Échec du test', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur de connexion', 'error');
+      }
+      
+      btn.disabled = false;
+      btn.innerHTML = originalContent;
+    }
+    
+    function addToQueue(job) {
+      queue.unshift(job);
+      if (queue.length > 10) queue.pop();
+      renderQueue();
+    }
+    
+    function clearQueue() {
+      queue = [];
+      renderQueue();
+      showToast('File d\'attente vidée', 'success');
+    }
+    
+    function renderQueue() {
+      const list = document.getElementById('queue-list');
+      const count = document.getElementById('queue-count');
+      
+      count.textContent = `${queue.length} job${queue.length !== 1 ? 's' : ''}`;
+      
+      if (queue.length === 0) {
+        list.innerHTML = `
+          <div class="queue-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <div>Aucun job en attente</div>
+          </div>
+        `;
+        return;
+      }
+      
+      list.innerHTML = queue.map(job => `
+        <div class="queue-item">
+          <div class="queue-icon ${job.status}">
+            ${job.status === 'done' ? `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            ` : job.status === 'printing' ? `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            ` : job.status === 'error' ? `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            ` : `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            `}
+          </div>
+          <div class="queue-info">
+            <div class="queue-title">${job.title}</div>
+            <div class="queue-meta">${job.id} • ${formatTime(job.time)}</div>
+          </div>
+          <span class="queue-status ${job.status}">
+            ${job.status === 'done' ? 'Terminé' : job.status === 'printing' ? 'En cours' : job.status === 'error' ? 'Erreur' : 'En attente'}
+          </span>
+        </div>
+      `).join('');
+    }
+    
+    // Charger et afficher les stats
+    async function loadStats() {
+      try {
+        const res = await fetch('/stats');
+        const stats = await res.json();
+        
+        // Mettre à jour les compteurs
+        document.getElementById('jobs-today').textContent = stats.today?.count || 0;
+        document.getElementById('jobs-30days').textContent = stats.last30Days?.count || 0;
+        document.getElementById('jobs-total').textContent = stats.total || 0;
+        jobsToday = stats.today?.count || 0;
+        
+        // Dessiner le graphique
+        renderChart(stats.last7Days || []);
+      } catch (err) {
+        console.error('Erreur chargement stats:', err);
+      }
+    }
+    
+    function renderChart(data) {
+      const container = document.getElementById('chart-container');
+      const maxCount = Math.max(...data.map(d => d.count), 1);
+      
+      container.innerHTML = data.map(d => {
+        const height = Math.max((d.count / maxCount) * 100, 4);
+        const isToday = d.date === new Date().toISOString().split('T')[0];
+        return `
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <div style="font-size: 11px; color: var(--text-muted);">${d.count}</div>
+            <div style="width: 100%; height: ${height}%; min-height: 4px; background: ${isToday ? 'var(--primary)' : 'var(--surface-hover)'}; border-radius: 4px; transition: height 0.3s;"></div>
+            <div style="font-size: 10px; color: var(--text-muted); white-space: nowrap;">${d.label}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // ============================================
+    // CONFIGURATION TAB FUNCTIONS
+    // ============================================
+    
+    let discoveredPrinters = [];
+    let savedPrinters = [];
+    let activePrinter = null;
+    
+    function switchTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      
+      // Load config data when switching to config tab
+      if (tabName === 'config') {
+        loadConfig();
+        loadModels();
+      }
+    }
+    
+    async function loadConfig() {
+      try {
+        const res = await fetchWithAuth('/config');
+        const config = await res.json();
+        
+        activePrinter = config.printer;
+        savedPrinters = config.savedPrinters || [];
+        
+        // Update manual IP field with current printer
+        if (activePrinter) {
+          document.getElementById('manual-ip').value = activePrinter.ip || '';
+          document.getElementById('manual-port').value = activePrinter.port || 9100;
+          document.getElementById('manual-name').value = activePrinter.name || '';
+        }
+        
+        // Update subtitle with current model
+        if (activePrinter?.model) {
+          document.getElementById('subtitle').textContent = `${activePrinter.model} • Gestion d'étiquettes`;
+        }
+        
+        renderSavedPrinters();
+        
+        // Load last scan results
+        if (config.lastScan?.printers) {
+          discoveredPrinters = config.lastScan.printers;
+          renderDiscoveredPrinters();
+        }
+      } catch (err) {
+        console.error('Erreur chargement config:', err);
+      }
+    }
+    
+    async function loadModels() {
+      try {
+        const res = await fetch('/models');
+        const data = await res.json();
+        
+        const container = document.getElementById('compatible-models');
+        const models = data.networkCompatible || [];
+        
+        container.innerHTML = models.map(m => `
+          <div class="model-badge" title="${m.notes || ''}">
+            ${m.name}
+            ${m.twoColor ? '<span style="color: #ef4444;">⬤</span>' : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Erreur chargement modèles:', err);
+      }
+    }
+    
+    async function testManualPrinter() {
+      const ip = document.getElementById('manual-ip').value.trim();
+      const port = parseInt(document.getElementById('manual-port').value) || 9100;
+      const resultDiv = document.getElementById('test-result');
+      const btn = document.getElementById('test-manual-btn');
+      
+      if (!ip) {
+        showToast('Veuillez entrer une adresse IP', 'warning');
+        return;
+      }
+      
+      btn.disabled = true;
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div style="color: var(--warning);">Test en cours...</div>';
+      
+      try {
+        const res = await fetchWithAuth('/test-printer', {
+          method: 'POST',
+          body: JSON.stringify({ ip, port })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          const modelInfo = data.model ? `
+            <div class="model-badge detected" style="margin-top: 8px;">
+              ✓ ${data.model.model || 'Brother détecté'}
+              ${data.model.media ? ` • ${data.model.media.width}` : ''}
+            </div>
+          ` : '';
+          
+          resultDiv.innerHTML = `
+            <div style="color: var(--success);">
+              ✓ Connexion réussie à ${ip}:${port}
+              ${modelInfo}
+            </div>
+          `;
+          showToast('Imprimante accessible!', 'success');
+        } else {
+          resultDiv.innerHTML = `<div style="color: var(--danger);">✗ ${data.error || 'Connexion échouée'}</div>`;
+          showToast('Impossible de se connecter', 'error');
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<div style="color: var(--danger);">✗ Erreur: ${err.message}</div>`;
+        showToast('Erreur de connexion', 'error');
+      }
+      
+      btn.disabled = false;
+    }
+    
+    async function setManualPrinter() {
+      const ip = document.getElementById('manual-ip').value.trim();
+      const port = parseInt(document.getElementById('manual-port').value) || 9100;
+      const name = document.getElementById('manual-name').value.trim();
+      const btn = document.getElementById('set-manual-btn');
+      
+      if (!ip) {
+        showToast('Veuillez entrer une adresse IP', 'warning');
+        return;
+      }
+      
+      btn.disabled = true;
+      
+      try {
+        const res = await fetchWithAuth('/config/printer', {
+          method: 'POST',
+          body: JSON.stringify({ ip, port, name })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          activePrinter = data.printer;
+          showToast('Imprimante configurée!', 'success');
+          
+          // Update subtitle
+          if (data.printer?.model) {
+            document.getElementById('subtitle').textContent = `${data.printer.model} • Gestion d'étiquettes`;
+          }
+          
+          // Refresh status on dashboard
+          refreshStatus();
+        } else {
+          showToast(data.error || 'Erreur de configuration', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+      
+      btn.disabled = false;
+    }
+    
+    async function quickScan() {
+      const btn = document.getElementById('quick-scan-btn');
+      const progressDiv = document.getElementById('scan-progress');
+      
+      btn.disabled = true;
+      document.getElementById('full-scan-btn').disabled = true;
+      progressDiv.style.display = 'block';
+      document.getElementById('scan-status').textContent = 'Scan rapide en cours...';
+      document.getElementById('scan-progress-fill').style.width = '50%';
+      
+      try {
+        const res = await fetchWithAuth('/discover/quick');
+        const data = await res.json();
+        
+        document.getElementById('scan-progress-fill').style.width = '100%';
+        
+        if (data.success) {
+          discoveredPrinters = data.printers || [];
+          renderDiscoveredPrinters();
+          showToast(`${data.found} imprimante(s) trouvée(s)`, data.found > 0 ? 'success' : 'warning');
+        } else {
+          showToast(data.error || 'Erreur de scan', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+      
+      setTimeout(() => {
+        progressDiv.style.display = 'none';
+        btn.disabled = false;
+        document.getElementById('full-scan-btn').disabled = false;
+      }, 500);
+    }
+    
+    async function fullScan() {
+      const btn = document.getElementById('full-scan-btn');
+      const progressDiv = document.getElementById('scan-progress');
+      
+      btn.disabled = true;
+      document.getElementById('quick-scan-btn').disabled = true;
+      progressDiv.style.display = 'block';
+      document.getElementById('scan-status').textContent = 'Scan complet en cours (peut prendre 1-2 minutes)...';
+      document.getElementById('scan-progress-fill').style.width = '0%';
+      
+      // Poll for progress
+      const progressInterval = setInterval(async () => {
+        try {
+          const res = await fetchWithAuth('/discover/status');
+          const status = await res.json();
+          if (status.scanning) {
+            document.getElementById('scan-progress-fill').style.width = `${status.progress || 0}%`;
+            document.getElementById('scan-status').textContent = `Scan: ${status.progress || 0}% (${status.found || 0} trouvées)`;
+          }
+        } catch (e) {}
+      }, 1000);
+      
+      try {
+        const res = await fetchWithAuth('/discover');
+        const data = await res.json();
+        
+        clearInterval(progressInterval);
+        document.getElementById('scan-progress-fill').style.width = '100%';
+        
+        if (data.success) {
+          discoveredPrinters = data.printers || [];
+          renderDiscoveredPrinters();
+          const duration = Math.round(data.duration / 1000);
+          showToast(`${data.found} imprimante(s) trouvée(s) en ${duration}s`, data.found > 0 ? 'success' : 'warning');
+        } else {
+          showToast(data.error || 'Erreur de scan', 'error');
+        }
+      } catch (err) {
+        clearInterval(progressInterval);
+        showToast('Erreur: ' + err.message, 'error');
+      }
+      
+      setTimeout(() => {
+        progressDiv.style.display = 'none';
+        btn.disabled = false;
+        document.getElementById('quick-scan-btn').disabled = false;
+      }, 500);
+    }
+    
+    function renderDiscoveredPrinters() {
+      const container = document.getElementById('discovered-printers');
+      const count = document.getElementById('discovered-count');
+      
+      count.textContent = `${discoveredPrinters.length} trouvée(s)`;
+      
+      if (discoveredPrinters.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <div>Lancez un scan pour découvrir les imprimantes</div>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = discoveredPrinters.map(p => {
+        const isActive = activePrinter && activePrinter.ip === p.ip;
+        const modelName = p.model?.model || 'Imprimante réseau';
+        const isBrother = p.model?.type === 'brother';
+        
+        return `
+          <div class="printer-card ${isActive ? 'active' : ''}">
+            <div class="printer-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+            </div>
+            <div class="printer-info">
+              <div class="printer-name">${p.hostname || p.ip}</div>
+              <div class="printer-details">${p.ip}:${p.ports?.[0] || 9100}</div>
+              ${isBrother ? `<span class="printer-model">${modelName}</span>` : ''}
+            </div>
+            <div class="printer-actions">
+              <button class="btn-icon" onclick="selectPrinter('${p.ip}', ${p.ports?.[0] || 9100}, '${modelName}')" title="Utiliser">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+              <button class="btn-icon" onclick="savePrinterToFavorites('${p.ip}', ${p.ports?.[0] || 9100}, '${modelName}')" title="Enregistrer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderSavedPrinters() {
+      const container = document.getElementById('saved-printers');
+      
+      if (savedPrinters.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            </svg>
+            <div>Aucune imprimante enregistrée</div>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = savedPrinters.map(p => {
+        const isActive = activePrinter && activePrinter.ip === p.ip;
+        
+        return `
+          <div class="printer-card ${isActive ? 'active' : ''}">
+            <div class="printer-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+            </div>
+            <div class="printer-info">
+              <div class="printer-name">${p.name || p.ip}</div>
+              <div class="printer-details">${p.ip}:${p.port || 9100}</div>
+              ${p.model ? `<span class="printer-model">${p.model}</span>` : ''}
+            </div>
+            <div class="printer-actions">
+              <button class="btn-icon" onclick="selectPrinter('${p.ip}', ${p.port || 9100}, '${p.model || ''}')" title="Utiliser">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+              <button class="btn-icon danger" onclick="removeSavedPrinter('${p.ip}')" title="Supprimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    async function selectPrinter(ip, port, model) {
+      try {
+        const res = await fetchWithAuth('/config/printer', {
+          method: 'POST',
+          body: JSON.stringify({ ip, port, model })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          activePrinter = data.printer;
+          showToast('Imprimante sélectionnée!', 'success');
+          renderDiscoveredPrinters();
+          renderSavedPrinters();
+          
+          // Update subtitle
+          if (data.printer?.model) {
+            document.getElementById('subtitle').textContent = `${data.printer.model} • Gestion d'étiquettes`;
+          }
+          
+          refreshStatus();
+        } else {
+          showToast(data.error || 'Erreur de sélection', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+    
+    async function savePrinterToFavorites(ip, port, model) {
+      try {
+        const res = await fetchWithAuth('/config/printers/save', {
+          method: 'POST',
+          body: JSON.stringify({ ip, port, model, name: model || `Imprimante ${ip}` })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          savedPrinters = data.savedPrinters;
+          renderSavedPrinters();
+          showToast('Imprimante enregistrée!', 'success');
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+    
+    async function removeSavedPrinter(ip) {
+      if (!confirm('Supprimer cette imprimante des favoris?')) return;
+      
+      try {
+        const res = await fetchWithAuth(`/config/printers/${encodeURIComponent(ip)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          savedPrinters = data.savedPrinters;
+          renderSavedPrinters();
+          showToast('Imprimante supprimée', 'success');
+        }
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+    
+    // Initial load
+    refreshStatus();
+    loadStats();
+    renderQueue();
+    
+    // Auto-refresh every 30s
+    setInterval(() => {
+      refreshStatus();
+      loadStats();
+    }, 30000);
+  </script>
+</body>
+</html>
