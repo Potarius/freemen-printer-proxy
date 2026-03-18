@@ -599,6 +599,10 @@
         </div>
         <div class="printer-info">
           <div class="info-row">
+            <span class="info-label">Modèle</span>
+            <span class="info-value" id="printer-model" style="font-weight: 600; color: var(--primary);">—</span>
+          </div>
+          <div class="info-row">
             <span class="info-label">Adresse IP</span>
             <span class="info-value" id="printer-ip">—</span>
           </div>
@@ -609,6 +613,10 @@
           <div class="info-row">
             <span class="info-label">Protocole</span>
             <span class="info-value" id="printer-protocol">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Média</span>
+            <span class="info-value" id="printer-media">—</span>
           </div>
           <div class="info-row">
             <span class="info-label">Dernière vérification</span>
@@ -891,12 +899,27 @@
         text.textContent = statusText;
         
         // Update printer info
+        const printerModel = document.getElementById('printer-model');
         const printerIp = document.getElementById('printer-ip');
         const printerPort = document.getElementById('printer-port');
         const printerProtocol = document.getElementById('printer-protocol');
+        const printerMedia = document.getElementById('printer-media');
         const lastCheck = document.getElementById('last-check');
         const uptime = document.getElementById('uptime');
         const nodeVersion = document.getElementById('node-version');
+        
+        // Fetch config for model/name info
+        try {
+          const configRes = await fetchWithAuth('/config');
+          const config = await configRes.json();
+          const model = config.printer?.model || config.printer?.name || null;
+          const media = config.printer?.media;
+          if (printerModel) printerModel.textContent = model || 'Non détecté';
+          if (printerMedia && media) printerMedia.textContent = `${media.width} - ${media.type}`;
+          else if (printerMedia) printerMedia.textContent = '—';
+        } catch (e) {
+          if (printerModel) printerModel.textContent = 'Non détecté';
+        }
         
         if (printerIp) printerIp.textContent = data.printer?.ip || '—';
         if (printerPort) printerPort.textContent = data.printer?.port || '—';
@@ -1190,12 +1213,20 @@
         
         if (data.success) {
           activePrinter = data.printer;
-          showToast('Imprimante configurée!', 'success');
           
-          // Update subtitle
-          if (data.printer?.model) {
-            document.getElementById('subtitle').textContent = `${data.printer.model} • Gestion d'étiquettes`;
+          // Update subtitle with model
+          const modelName = data.printer?.model || data.printer?.name || 'Brother QL';
+          document.getElementById('subtitle').textContent = `${modelName} • Gestion d'étiquettes`;
+          
+          // Notify if saved to favorites
+          if (data.savedToFavorites) {
+            showToast(`${modelName} configurée et ajoutée aux favoris!`, 'success');
+          } else {
+            showToast(`${modelName} configurée!`, 'success');
           }
+          
+          // Reload saved printers list
+          loadConfig();
           
           // Refresh status on dashboard
           refreshStatus();

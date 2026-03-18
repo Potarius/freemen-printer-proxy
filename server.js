@@ -382,27 +382,49 @@ app.post('/config/printer', authenticate, async (req, res) => {
       });
     }
     
-    // Sauvegarder la config
+    // Déterminer le nom et modèle
+    const detectedModel = testResult.model?.model || model || null;
+    const printerName = name || detectedModel || `Imprimante ${ip}`;
+    
+    // Sauvegarder la config active
     const printerInfo = configManager.setActivePrinter({
       ip,
       port,
       protocol,
-      name: name || `Imprimante ${ip}`,
-      model: testResult.model?.model || model || null,
+      name: printerName,
+      model: detectedModel,
+      series: testResult.model?.series || null,
+      media: testResult.model?.media || null,
       autoDetected: !!testResult.model
     });
+    
+    // Auto-enregistrer dans les favoris si pas déjà présent
+    const config = configManager.getConfig();
+    const alreadySaved = config.savedPrinters?.some(p => p.ip === ip);
+    if (!alreadySaved) {
+      configManager.savePrinter({
+        ip,
+        port,
+        protocol,
+        name: printerName,
+        model: detectedModel,
+        series: testResult.model?.series || null
+      });
+      logger.info('Imprimante ajoutée aux favoris', { ip, name: printerName });
+    }
     
     // Réinitialiser le client imprimante
     initPrinterClient(true);
     lastPrinterStatus = { connected: false, lastCheck: null };
     
-    logger.info('Imprimante configurée', { ip, port, model: printerInfo.model });
+    logger.info('Imprimante configurée', { ip, port, model: detectedModel, name: printerName });
     
     res.json({
       success: true,
       message: 'Imprimante configurée avec succès',
       printer: printerInfo,
-      detected: testResult.model
+      detected: testResult.model,
+      savedToFavorites: !alreadySaved
     });
     
   } catch (error) {
