@@ -457,6 +457,25 @@ app.post('/config/printers/save', authenticate, (req, res) => {
   }
 });
 
+// Modifier une imprimante enregistrée
+app.patch('/config/printers/:ip', authenticate, (req, res) => {
+  try {
+    const originalIp = req.params.ip;
+    const { name, model, ip, port } = req.body;
+    
+    const savedPrinters = configManager.updateSavedPrinter(originalIp, {
+      name,
+      model,
+      ip: ip || originalIp,
+      port: port || 9100
+    });
+    
+    res.json({ success: true, savedPrinters });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Supprimer une imprimante des favoris
 app.delete('/config/printers/:ip', authenticate, (req, res) => {
   try {
