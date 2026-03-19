@@ -17,6 +17,16 @@ data/
 # Backups
 .backups/
 
+# Provisioner output (generated device configs)
+tools/provisioner/output/
+tools/provisioner/node_modules/
+
+# Local device configs (generated, sensitive)
+*.local.json
+device.env
+docker-compose.override.yml
+docker-compose.cloudflare.yml
+
 # OS
 .DS_Store
 Thumbs.db

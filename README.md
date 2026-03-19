@@ -136,6 +136,7 @@ curl -X POST http://localhost:6500/print/qr \
 
 - **[Install on Raspberry Pi](docs/INSTALL_RASPBERRY_PI.md)** — Complete Pi setup guide
 - **[Install on Linux](docs/INSTALL_LINUX.md)** — Server/desktop installation
+- **[Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md)** — Secure remote access setup
 - **[Architecture](docs/ARCHITECTURE.md)** — Technical overview
 - **[Update Guide](docs/UPDATE.md)** — How to update
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions
@@ -153,11 +154,40 @@ freemen-printer-proxy/
 ├── lib/                   # Core modules
 ├── middleware/            # Express middleware
 ├── public/                # Web dashboard
-├── scripts/               # Installation scripts
+├── scripts/               # Installation & update scripts
+├── tools/provisioner/     # Cloudflare provisioning tool
 ├── docs/                  # Documentation
 ├── data/                  # Persistent config (gitignored)
 └── logs/                  # Application logs (gitignored)
 ```
+
+---
+
+## Remote Access (Cloudflare Tunnel)
+
+Securely expose your printer proxy to the internet without port forwarding.
+
+### Windows Provisioner
+
+```powershell
+cd tools\provisioner
+.\provision.bat
+```
+
+### Mac/Linux
+
+```bash
+cd tools/provisioner
+npm install
+node index.js
+```
+
+The interactive provisioner will:
+1. Connect to your Cloudflare account
+2. Create a tunnel and DNS record
+3. Generate deployment files for your device
+
+See **[Cloudflare Tunnel Guide](docs/CLOUDFLARE_TUNNEL.md)** for details.
 
 ---
 

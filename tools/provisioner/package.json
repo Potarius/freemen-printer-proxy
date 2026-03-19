@@ -1,0 +1,29 @@
+{
+  "name": "freemen-provisioner",
+  "version": "1.0.0",
+  "description": "Freemen Printer Proxy - Cloudflare Tunnel Provisioner",
+  "main": "index.js",
+  "bin": {
+    "freemen-provision": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "provision": "node index.js"
+  },
+  "keywords": [
+    "freemen",
+    "cloudflare",
+    "tunnel",
+    "provisioner"
+  ],
+  "author": "Freemen Solutions",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1",
+    "boxen": "^5.1.2",
+    "node-fetch": "^2.7.0",
+    "uuid": "^9.0.0"
+  }
+}

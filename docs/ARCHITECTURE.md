@@ -236,9 +236,9 @@ FROM node:20-alpine  // Supports AMD64 + ARM64
 
 ## Evolution Roadmap
 
-### Current: Phase 1.1 — Local Administration
+### Phase 1.1 — Local Administration ✓
 
-The proxy is now fully administrable locally:
+The proxy is fully administrable locally:
 
 **Implemented:**
 - Version visible in API, dashboard footer, and Admin tab
@@ -248,13 +248,54 @@ The proxy is now fully administrable locally:
 - Dashboard Admin tab with system info and logs
 - Configuration backups during updates
 
-**Admin Tools:**
+---
+
+### Current: Phase 1.2 — Windows Provisioner + Cloudflare
+
+Secure remote access via Cloudflare Tunnel, provisioned from Windows.
+
+**Implemented:**
+- Windows provisioner CLI (`tools/provisioner/`)
+- Cloudflare API integration (zones, tunnels, DNS)
+- Interactive flow: Token → Account → Zone → Hostname → Tunnel
+- Device config generation (non-versioned)
+- Platform-specific setup scripts (Pi/Linux)
+- Docker Compose override with cloudflared sidecar
+
+**Provisioning Tools:**
 | Tool | Purpose |
 |------|---------|
-| `deploy-menu.sh` | Interactive admin/deployment menu |
-| `scripts/update.sh` | Non-interactive robust update |
-| `scripts/doctor.sh` | System diagnostics |
-| Dashboard Admin tab | Web-based monitoring |
+| `tools/provisioner/provision.bat` | Windows batch launcher |
+| `tools/provisioner/provision.ps1` | PowerShell wrapper |
+| `tools/provisioner/index.js` | Node.js CLI (cross-platform) |
+
+**Generated Files:**
+| File | Description |
+|------|-------------|
+| `device.json` | Device identity and tunnel config |
+| `device.env` | Environment variables with tunnel token |
+| `docker-compose.cloudflare.yml` | Compose with cloudflared sidecar |
+| `cloudflared.service` | Systemd unit for non-Docker |
+| `setup-pi.sh` / `setup-linux.sh` | Platform setup scripts |
+
+**Architecture:**
+```
+┌─────────────────────┐      ┌─────────────────────┐
+│   Windows/Mac       │      │   Target Device     │
+│   Workstation       │      │   (Pi/Linux)        │
+│                     │      │                     │
+│  ┌───────────────┐  │      │  ┌───────────────┐  │
+│  │  Provisioner  │──┼──────┼─▶│ Config Files  │  │
+│  │  CLI          │  │ copy │  └───────────────┘  │
+│  └───────┬───────┘  │      │         │          │
+│          │ API      │      │         ▼          │
+│          ▼          │      │  ┌───────────────┐  │
+│  ┌───────────────┐  │      │  │ cloudflared   │  │
+│  │  Cloudflare   │  │      │  │      +        │  │
+│  │  Dashboard    │  │      │  │ Printer Proxy │  │
+│  └───────────────┘  │      │  └───────────────┘  │
+└─────────────────────┘      └─────────────────────┘
+```
 
 ---
 
