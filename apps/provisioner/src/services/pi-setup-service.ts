@@ -1,0 +1,548 @@
+/**
+ * Raspberry Pi Setup Service
+ * Generates headless configuration files for Raspberry Pi OS
+ */
+
+import type {
+  PiSetupConfig,
+  PiBootFile,
+  PiSetupPackage,
+  DetectedDrive,
+} from '../types';
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+export const DEFAULT_PI_CONFIG: PiSetupConfig = {
+  hostname: 'freemen-pi',
+  username: 'freemen',
+  password: '',
+  wifiSsid: '',
+  wifiPassword: '',
+  wifiCountry: 'US',
+  enableSsh: true,
+  timezone: 'America/New_York',
+  locale: 'en_US.UTF-8',
+  keyboardLayout: 'us',
+};
+
+export const WIFI_COUNTRIES = [
+  { code: 'US', name: 'United States' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+];
+
+export const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Toronto',
+  'America/Vancouver',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Amsterdam',
+  'Europe/Zurich',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
+
+// ============================================
+// PI SETUP SERVICE
+// ============================================
+
+export class PiSetupService {
+  /**
+   * Generate all boot partition files for headless setup
+   */
+  generateBootFiles(config: PiSetupConfig): PiBootFile[] {
+    const files: PiBootFile[] = [];
+
+    // SSH file (enables SSH on first boot)
+    if (config.enableSsh) {
+      files.push(this.generateSshFile());
+    }
+
+    // userconf.txt (sets username and password)
+    if (config.username && config.password) {
+      files.push(this.generateUserconfFile(config.username, config.password));
+    }
+
+    // wpa_supplicant.conf (WiFi configuration)
+    if (config.wifiSsid && config.wifiPassword) {
+      files.push(this.generateWpaSupplicantFile(config));
+    }
+
+    // custom.toml (Raspberry Pi Imager config format)
+    files.push(this.generateCustomToml(config));
+
+    // firstrun.sh (first boot script)
+    files.push(this.generateFirstRunScript(config));
+
+    // cmdline.txt additions info
+    files.push(this.generateCmdlineInfo());
+
+    return files;
+  }
+
+  /**
+   * Generate empty SSH file to enable SSH on boot
+   */
+  private generateSshFile(): PiBootFile {
+    return {
+      name: 'ssh',
+      path: 'ssh',
+      description: 'Empty file that enables SSH on first boot',
+      content: '',
+      required: true,
+    };
+  }
+
+  /**
+   * Generate userconf.txt for setting username and password
+   * Format: username:encrypted-password
+   */
+  private generateUserconfFile(username: string, password: string): PiBootFile {
+    // In real implementation, this would use openssl to encrypt
+    // For now, we provide instructions
+    const encryptedPassword = this.encryptPassword(password);
+    
+    return {
+      name: 'userconf.txt',
+      path: 'userconf.txt',
+      description: 'Sets the default username and password',
+      content: `${username}:${encryptedPassword}`,
+      required: true,
+    };
+  }
+
+  /**
+   * Encrypt password using SHA-512 (simplified - real impl needs openssl)
+   */
+  private encryptPassword(password: string): string {
+    // This is a placeholder - in production, use:
+    // echo 'password' | openssl passwd -6 -stdin
+    // For now, return a marker that needs to be replaced
+    return `$6$rounds=656000$placeholder$REPLACE_WITH_ENCRYPTED_PASSWORD`;
+  }
+
+  /**
+   * Generate wpa_supplicant.conf for WiFi
+   */
+  private generateWpaSupplicantFile(config: PiSetupConfig): PiBootFile {
+    const content = `country=${config.wifiCountry}
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={
+    ssid="${config.wifiSsid}"
+    psk="${config.wifiPassword}"
+    key_mgmt=WPA-PSK
+}
+`;
+
+    return {
+      name: 'wpa_supplicant.conf',
+      path: 'wpa_supplicant.conf',
+      description: 'WiFi network configuration',
+      content,
+      required: false,
+    };
+  }
+
+  /**
+   * Generate custom.toml (Raspberry Pi Imager format)
+   */
+  private generateCustomToml(config: PiSetupConfig): PiBootFile {
+    const wifiSection = config.wifiSsid ? `
+[wlan]
+ssid = "${config.wifiSsid}"
+password = "${config.wifiPassword}"
+country = "${config.wifiCountry}"
+` : '';
+
+    const content = `# Raspberry Pi OS Configuration
+# Generated by Freemen Provisioner
+# Place in boot partition as custom.toml
+
+[system]
+hostname = "${config.hostname}"
+timezone = "${config.timezone}"
+keymap = "${config.keyboardLayout}"
+
+[user]
+name = "${config.username}"
+# Password must be set during first boot or via userconf.txt
+
+[ssh]
+enabled = ${config.enableSsh}
+${wifiSection}
+[locale]
+lang = "${config.locale}"
+`;
+
+    return {
+      name: 'custom.toml',
+      path: 'custom.toml',
+      description: 'Raspberry Pi Imager configuration format',
+      content,
+      required: false,
+    };
+  }
+
+  /**
+   * Generate firstrun.sh script for additional setup
+   */
+  private generateFirstRunScript(config: PiSetupConfig): PiBootFile {
+    const content = `#!/bin/bash
+# Freemen Printer Proxy - First Run Setup
+# This script runs once on first boot
+
+set -e
+
+# Set hostname
+raspi-config nonint do_hostname ${config.hostname}
+
+# Set timezone
+timedatectl set-timezone ${config.timezone}
+
+# Set locale
+localectl set-locale LANG=${config.locale}
+
+# Set keyboard layout
+localectl set-keymap ${config.keyboardLayout}
+
+# Enable SSH
+systemctl enable ssh
+systemctl start ssh
+
+# Update package lists
+apt-get update
+
+# Install required packages
+apt-get install -y curl docker.io docker-compose
+
+# Add user to docker group
+usermod -aG docker ${config.username}
+
+# Create freemen directory
+mkdir -p /opt/freemen-printer-proxy
+chown ${config.username}:${config.username} /opt/freemen-printer-proxy
+
+# Log completion
+echo "Freemen first-run setup complete" | tee /var/log/freemen-firstrun.log
+date >> /var/log/freemen-firstrun.log
+
+# Remove this script from running again
+rm -f /boot/firstrun.sh
+sed -i 's| systemd.run.*||g' /boot/cmdline.txt
+
+# Reboot to apply changes
+reboot
+`;
+
+    return {
+      name: 'firstrun.sh',
+      path: 'firstrun.sh',
+      description: 'First boot setup script (optional, advanced)',
+      content,
+      required: false,
+    };
+  }
+
+  /**
+   * Generate cmdline.txt modification info
+   */
+  private generateCmdlineInfo(): PiBootFile {
+    const content = `# cmdline.txt Modification (Optional)
+# =====================================
+# 
+# To run firstrun.sh automatically on first boot, add this to the END
+# of the existing cmdline.txt (on the same line, after a space):
+#
+#   systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
+#
+# IMPORTANT: cmdline.txt must be a single line!
+#
+# Example full cmdline.txt:
+# console=serial0,115200 console=tty1 root=PARTUUID=xxxxx rootfstype=ext4 fsck.repair=yes rootwait quiet splash systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
+`;
+
+    return {
+      name: 'CMDLINE_README.txt',
+      path: 'CMDLINE_README.txt',
+      description: 'Instructions for cmdline.txt modification',
+      content,
+      required: false,
+    };
+  }
+
+  /**
+   * Generate complete setup package
+   */
+  generateSetupPackage(config: PiSetupConfig, devicePackagePath?: string): PiSetupPackage {
+    const bootFiles = this.generateBootFiles(config);
+
+    return {
+      id: `pi-setup-${Date.now().toString(36)}`,
+      createdAt: new Date().toISOString(),
+      config,
+      bootFiles,
+      devicePackagePath,
+    };
+  }
+
+  /**
+   * Generate setup instructions README
+   */
+  generateReadme(config: PiSetupConfig): string {
+    const wifiInstructions = config.wifiSsid 
+      ? `
+### WiFi Configuration
+Your Pi will connect to: **${config.wifiSsid}**
+Country code: ${config.wifiCountry}
+`
+      : `
+### Network Configuration
+WiFi is not configured. Connect via Ethernet cable.
+`;
+
+    return `# Freemen Printer Proxy - Raspberry Pi Setup
+
+## Your Configuration
+
+| Setting | Value |
+|---------|-------|
+| Hostname | \`${config.hostname}\` |
+| Username | \`${config.username}\` |
+| SSH | ${config.enableSsh ? '✅ Enabled' : '❌ Disabled'} |
+| Timezone | ${config.timezone} |
+
+${wifiInstructions}
+
+## Setup Instructions
+
+### Step 1: Flash Raspberry Pi OS
+
+1. Download **Raspberry Pi Imager** from https://www.raspberrypi.com/software/
+2. Select **Raspberry Pi OS Lite (64-bit)** 
+3. Select your microSD card
+4. Click **WRITE**
+
+### Step 2: Copy Boot Files
+
+After flashing, the boot partition will be accessible.
+
+**Copy these files to the boot partition:**
+
+1. \`ssh\` - Enables SSH access
+2. \`userconf.txt\` - Sets username and password
+${config.wifiSsid ? '3. `wpa_supplicant.conf` - WiFi configuration' : ''}
+
+### Step 3: First Boot
+
+1. Insert the microSD card into your Raspberry Pi
+2. Connect power
+3. Wait 2-3 minutes for first boot
+4. Find your Pi on the network:
+   \`\`\`bash
+   ping ${config.hostname}.local
+   \`\`\`
+
+### Step 4: Connect via SSH
+
+\`\`\`bash
+ssh ${config.username}@${config.hostname}.local
+\`\`\`
+
+Default password: *(the one you set)*
+
+### Step 5: Deploy Freemen Printer Proxy
+
+1. Copy the device package to your Pi
+2. Run the setup script:
+   \`\`\`bash
+   cd ~/freemen-printer-proxy
+   sudo ./setup.sh
+   \`\`\`
+
+## Troubleshooting
+
+### Can't find Pi on network
+- Check that the microSD card was properly ejected before removing
+- Verify the boot files are in the root of the boot partition
+- Try connecting via Ethernet first
+
+### SSH connection refused
+- Verify the \`ssh\` file exists in boot partition
+- Wait longer for first boot to complete (up to 5 minutes)
+
+### WiFi not connecting
+- Verify \`wpa_supplicant.conf\` syntax
+- Check WiFi country code matches your region
+- Ensure WiFi password is correct
+
+## Support
+
+For help, visit: https://github.com/Potarius/freemen-printer-proxy
+`;
+  }
+
+  /**
+   * Validate Pi setup configuration
+   */
+  validateConfig(config: PiSetupConfig): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Hostname validation
+    if (!config.hostname || config.hostname.length < 2) {
+      errors.push('Hostname must be at least 2 characters');
+    }
+    if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(config.hostname)) {
+      errors.push('Hostname must start with a letter and contain only letters, numbers, and hyphens');
+    }
+
+    // Username validation
+    if (!config.username || config.username.length < 2) {
+      errors.push('Username must be at least 2 characters');
+    }
+    if (!/^[a-z][a-z0-9_-]*$/.test(config.username)) {
+      errors.push('Username must start with lowercase letter and contain only lowercase letters, numbers, underscores, and hyphens');
+    }
+    if (config.username === 'pi') {
+      errors.push('Username "pi" is deprecated. Please choose a different username.');
+    }
+
+    // Password validation
+    if (!config.password || config.password.length < 8) {
+      errors.push('Password must be at least 8 characters');
+    }
+
+    // WiFi validation (if provided)
+    if (config.wifiSsid && !config.wifiPassword) {
+      errors.push('WiFi password is required when SSID is provided');
+    }
+    if (config.wifiPassword && config.wifiPassword.length < 8) {
+      errors.push('WiFi password must be at least 8 characters');
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Generate suggested hostname from device name
+   */
+  generateHostname(deviceName: string): string {
+    return deviceName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 63) || 'freemen-pi';
+  }
+}
+
+// ============================================
+// SD CARD DETECTION (Windows)
+// ============================================
+
+declare global {
+  interface Window {
+    __TAURI__?: {
+      shell: {
+        Command: new (cmd: string, args?: string[]) => {
+          execute: () => Promise<{ code: number; stdout: string; stderr: string }>;
+        };
+      };
+    };
+  }
+}
+
+export async function detectRemovableDrives(): Promise<DetectedDrive[]> {
+  // This would use Tauri to run Windows commands
+  // For now, return empty array in browser mode
+  if (typeof window === 'undefined' || !window.__TAURI__) {
+    console.log('[PiSetup] Running in browser mode - SD detection not available');
+    return [];
+  }
+
+  try {
+    // Use PowerShell to detect removable drives
+    const Command = window.__TAURI__.shell.Command;
+    const cmd = new Command('powershell', [
+      '-Command',
+      'Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 2} | Select-Object DeviceID, VolumeName, Size, FreeSpace | ConvertTo-Json'
+    ]);
+    
+    const result = await cmd.execute();
+    
+    if (result.code !== 0) {
+      console.error('[PiSetup] Failed to detect drives:', result.stderr);
+      return [];
+    }
+
+    const driveData = JSON.parse(result.stdout || '[]');
+    const drives = Array.isArray(driveData) ? driveData : [driveData];
+
+    return drives
+      .filter((d: any) => d && d.DeviceID)
+      .map((d: any) => ({
+        letter: d.DeviceID.replace(':', ''),
+        label: d.VolumeName || 'Removable',
+        type: 'removable' as const,
+        size: d.Size || 0,
+        freeSpace: d.FreeSpace || 0,
+        isBootPartition: d.VolumeName?.toLowerCase().includes('boot') || false,
+      }));
+  } catch (error) {
+    console.error('[PiSetup] Error detecting drives:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if a drive looks like a Raspberry Pi boot partition
+ */
+export function isPiBootPartition(drive: DetectedDrive): boolean {
+  // Boot partition is usually labeled "boot" or "bootfs"
+  // And is typically small (256MB - 512MB)
+  const label = drive.label.toLowerCase();
+  const isBootLabel = label.includes('boot') || label === 'bootfs';
+  const isSmallSize = drive.size > 0 && drive.size < 1024 * 1024 * 1024; // < 1GB
+  
+  return isBootLabel || (drive.type === 'removable' && isSmallSize);
+}
+
+// ============================================
+// SINGLETON EXPORT
+// ============================================
+
+let serviceInstance: PiSetupService | null = null;
+
+export function getPiSetupService(): PiSetupService {
+  if (!serviceInstance) {
+    serviceInstance = new PiSetupService();
+  }
+  return serviceInstance;
+}

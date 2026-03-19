@@ -206,6 +206,57 @@ export interface DevicePackageSummary {
 }
 
 // ============================================
+// RASPBERRY PI SETUP TYPES
+// ============================================
+
+export interface PiSetupConfig {
+  hostname: string;
+  username: string;
+  password: string;
+  wifiSsid?: string;
+  wifiPassword?: string;
+  wifiCountry: string;
+  enableSsh: boolean;
+  timezone: string;
+  locale: string;
+  keyboardLayout: string;
+}
+
+export interface PiBootFile {
+  name: string;
+  path: string;
+  description: string;
+  content: string;
+  required: boolean;
+}
+
+export interface PiSetupPackage {
+  id: string;
+  createdAt: string;
+  config: PiSetupConfig;
+  bootFiles: PiBootFile[];
+  devicePackagePath?: string;
+  sdCardPath?: string;
+}
+
+export interface DetectedDrive {
+  letter: string;
+  label: string;
+  type: 'removable' | 'fixed' | 'unknown';
+  size: number;
+  freeSpace: number;
+  isBootPartition: boolean;
+}
+
+export interface PiSetupStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'active' | 'completed' | 'skipped';
+  optional?: boolean;
+}
+
+// ============================================
 // UI TYPES
 // ============================================
 
