@@ -144,12 +144,65 @@ export interface GeneratedFile {
   path: string;
   description: string;
   content?: string;
+  size?: number;
+  isExecutable?: boolean;
 }
 
 export interface ConfigPackage {
   deviceId: string;
   outputDir: string;
   files: GeneratedFile[];
+}
+
+// ============================================
+// DEVICE PACKAGE TYPES
+// ============================================
+
+export interface DevicePackageConfig {
+  deviceId: string;
+  deviceName: string;
+  platform: TargetPlatform;
+  hostname: string;
+  tunnelName: string;
+  tunnelToken: string;
+  tunnelId: string;
+  accountId: string;
+  zoneId: string;
+  zoneName: string;
+  servicePort: number;
+  printerIp?: string;
+  printerPort?: number;
+}
+
+export interface DevicePackageFile {
+  name: string;
+  relativePath: string;
+  description: string;
+  content: string;
+  size: number;
+  isExecutable: boolean;
+  category: 'config' | 'script' | 'docker' | 'docs';
+}
+
+export interface DevicePackage {
+  id: string;
+  createdAt: string;
+  platform: TargetPlatform;
+  outputPath: string;
+  files: DevicePackageFile[];
+  summary: DevicePackageSummary;
+}
+
+export interface DevicePackageSummary {
+  deviceId: string;
+  deviceName: string;
+  platform: TargetPlatform;
+  publicUrl: string;
+  tunnelName: string;
+  tunnelId: string;
+  totalFiles: number;
+  totalSize: number;
+  deploymentSteps: string[];
 }
 
 // ============================================

@@ -20,8 +20,9 @@ import {
   SuccessStep,
   defaultProvisionTasks,
 } from '../components/wizard/steps';
-import { TargetPlatform } from '../types';
+import type { TargetPlatform, DevicePackage, DevicePackageFile } from '../types';
 import { useCloudflareStore } from '../stores/cloudflare-store';
+import { usePackageStore, createPackageConfig } from '../stores/package-store';
 import { Rocket, Cpu, KeyRound, Globe, Link, Settings, ClipboardList, Cloud, CheckCircle } from 'lucide-react';
 
 // Wizard step configuration
@@ -66,6 +67,19 @@ export function WizardPage() {
     clearError,
     reset: resetCloudflare,
   } = useCloudflareStore();
+
+  // Package store
+  const {
+    package: devicePackage,
+    writeResult,
+    generatePackage,
+    writePackage,
+    downloadFile,
+    downloadPackage,
+    openOutputFolder,
+    copyDeploymentSteps,
+    clearPackage,
+  } = usePackageStore();
   
   // Local form state
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('raspberry-pi');
@@ -211,16 +225,39 @@ export function WizardPage() {
       tasks[4].status = 'running';
       setProvisionTasks([...tasks]);
 
-      // TODO: Generate actual config files using config-generator service
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Generate device package with all config files
+      const generatedDeviceId = `fpp-${Date.now().toString(36)}`;
+      const packageConfig = createPackageConfig(
+        generatedDeviceId,
+        deviceName,
+        targetPlatform,
+        fullHostname,
+        tunnelName,
+        token,
+        createdTunnel.id,
+        selectedAccount!.id,
+        selectedZone!.id,
+        selectedZone!.name,
+        printerIp || undefined,
+        printerPort ? parseInt(printerPort, 10) : undefined
+      );
+
+      const pkg = generatePackage(packageConfig);
+      
+      // Write package to disk
+      const writeResult = await writePackage();
+      
+      if (!writeResult?.success) {
+        console.warn('Package write had issues:', writeResult?.errors);
+      }
 
       tasks[4].status = 'success';
-      tasks[4].message = 'Deployment package ready';
+      tasks[4].message = `Package created: ${pkg.files.length} files`;
       setProvisionTasks([...tasks]);
 
       // Success
       setCurrentTaskId(null);
-      setDeviceId(`fpp-${Date.now().toString(36)}`);
+      setDeviceId(generatedDeviceId);
       setCurrentStep(8);
 
     } catch (error) {
@@ -239,22 +276,25 @@ export function WizardPage() {
   };
 
   // Actions for success step
-  const handleDownload = () => {
-    // TODO: Implement actual download using Tauri
-    console.log('Downloading configuration package...', {
-      tunnelToken,
-      hostname: `${hostname}.${selectedZone?.name}`,
-      tunnelId: tunnel?.id,
-    });
+  const handleDownload = async () => {
+    await downloadPackage();
   };
 
-  const handleOpenFolder = () => {
-    // TODO: Implement using Tauri shell API
-    console.log('Opening output folder...');
+  const handleDownloadFile = (file: DevicePackageFile) => {
+    downloadFile(file);
+  };
+
+  const handleOpenFolder = async () => {
+    await openOutputFolder();
+  };
+
+  const handleCopySteps = async () => {
+    await copyDeploymentSteps();
   };
 
   const handleNewDevice = () => {
     resetCloudflare();
+    clearPackage();
     setCurrentStep(0);
     setHostname('printer');
     setTunnelName('freemen-printer-proxy');
@@ -340,8 +380,12 @@ export function WizardPage() {
             hostname={`${hostname}.${selectedZone?.name || 'example.com'}`}
             tunnelName={tunnelName}
             deviceId={deviceId}
+            devicePackage={devicePackage}
+            outputPath={writeResult?.outputPath}
             onDownload={handleDownload}
+            onDownloadFile={handleDownloadFile}
             onOpenFolder={handleOpenFolder}
+            onCopySteps={handleCopySteps}
             onNewDevice={handleNewDevice}
           />
         );
