@@ -19,6 +19,14 @@ const printerModels = require('./lib/printerModels');
 const configManager = require('./lib/config');
 
 // ============================================
+// VERSION INFO
+// ============================================
+const packageJson = require('./package.json');
+const APP_VERSION = packageJson.version;
+const APP_NAME = packageJson.name;
+const APP_START_TIME = new Date();
+
+// ============================================
 // SYSTÈME DE STATISTIQUES
 // ============================================
 const STATS_FILE = path.join(__dirname, 'data', 'print-stats.json');
@@ -242,8 +250,8 @@ const authenticate = (req, res, next) => {
 // Routes de santé (publiques)
 app.get('/api', (req, res) => {
   res.json({
-    service: 'Freeman Printer Proxy',
-    version: '1.0.0',
+    service: 'Freemen Printer Proxy',
+    version: APP_VERSION,
     status: 'online',
     endpoints: {
       dashboard: 'GET /',
@@ -264,8 +272,8 @@ app.get('/health', async (req, res) => {
     
     res.status(isHealthy ? 200 : 503).json({
       status: isHealthy ? 'healthy' : 'degraded',
-      service: 'printer-proxy',
-      version: '1.0.0',
+      service: APP_NAME,
+      version: APP_VERSION,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       printer: {
@@ -331,6 +339,113 @@ app.get('/status', authenticate, async (req, res) => {
   } catch (error) {
     logger.error('Erreur status', { error: error.message });
     res.status(500).json({ error: 'Erreur lors de la vérification du statut' });
+  }
+});
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+// System info endpoint (version, uptime, environment)
+app.get('/admin/info', authenticate, (req, res) => {
+  const config = configManager.getConfig();
+  res.json({
+    service: 'Freemen Printer Proxy',
+    version: APP_VERSION,
+    environment: process.env.NODE_ENV || 'development',
+    startTime: APP_START_TIME.toISOString(),
+    uptime: process.uptime(),
+    uptimeFormatted: formatUptime(process.uptime()),
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      unit: 'MB'
+    },
+    printer: {
+      configured: !!(config.printer && config.printer.ip),
+      ip: config.printer?.ip || null,
+      model: config.printer?.model || null
+    }
+  });
+});
+
+// Helper to format uptime
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+// Check for updates (compares local version with remote)
+app.get('/admin/check-update', authenticate, async (req, res) => {
+  try {
+    // For now, just return current version info
+    // In a future implementation, this could check a remote source
+    res.json({
+      currentVersion: APP_VERSION,
+      updateAvailable: false,
+      message: 'Version check requires manual verification. Run ./scripts/update.sh to update.',
+      howToUpdate: [
+        'SSH into the server',
+        'cd to project directory',
+        'Run: ./scripts/update.sh',
+        'Or use: ./deploy-menu.sh for interactive menu'
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Restart info (cannot restart from within container, provide instructions)
+app.get('/admin/restart-info', authenticate, (req, res) => {
+  res.json({
+    canRestartFromUI: false,
+    reason: 'Container cannot restart itself safely',
+    instructions: [
+      'SSH into the server',
+      'Run: docker compose restart',
+      'Or use: ./deploy-menu.sh option 2'
+    ],
+    commands: {
+      restart: 'docker compose restart',
+      stop: 'docker compose down',
+      start: 'docker compose up -d',
+      logs: 'docker compose logs -f',
+      status: 'docker compose ps'
+    }
+  });
+});
+
+// Logs endpoint (last N lines of application logs)
+app.get('/admin/logs', authenticate, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const logFile = path.join(__dirname, 'logs', 'combined.log');
+  
+  try {
+    if (fs.existsSync(logFile)) {
+      const content = fs.readFileSync(logFile, 'utf8');
+      const lines = content.trim().split('\n').slice(-limit);
+      res.json({
+        lines: lines,
+        count: lines.length,
+        file: 'combined.log'
+      });
+    } else {
+      res.json({
+        lines: [],
+        count: 0,
+        message: 'No log file found'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

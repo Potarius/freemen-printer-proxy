@@ -161,9 +161,42 @@ freemen-printer-proxy/
 
 ---
 
-## Useful Commands
+## Administration
+
+### Interactive Admin Menu
+
+For interactive server management:
 
 ```bash
+./deploy-menu.sh
+```
+
+This provides a menu-driven interface for:
+- Full deployment (pull + build + restart)
+- Quick restart
+- Build/Start/Stop operations
+- View logs and status
+- Run updates and diagnostics
+
+### Admin Dashboard
+
+The web dashboard includes an **Admin** tab with:
+- System information (version, uptime, memory)
+- Quick actions (check updates, view logs)
+- SSH command reference
+
+### Useful Commands
+
+```bash
+# Interactive admin menu
+./deploy-menu.sh
+
+# Non-interactive update
+./scripts/update.sh
+
+# Diagnostics
+./scripts/doctor.sh
+
 # View logs
 docker compose logs -f
 
@@ -172,12 +205,6 @@ docker compose restart
 
 # Stop
 docker compose down
-
-# Update
-./scripts/update.sh
-
-# Diagnostics
-./scripts/doctor.sh
 ```
 
 ---

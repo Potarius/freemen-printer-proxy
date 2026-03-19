@@ -53,6 +53,10 @@ The main application:
 | `/print/test` | POST | Test print |
 | `/print/qr` | POST | Print QR code label |
 | `/print/raw` | POST | Print raw data |
+| `/admin/info` | GET | System info (version, uptime) |
+| `/admin/logs` | GET | Recent application logs |
+| `/admin/check-update` | GET | Update information |
+| `/admin/restart-info` | GET | Restart instructions |
 
 ### 2. Printer Client (`lib/printer.js`)
 
@@ -230,7 +234,31 @@ FROM node:20-alpine  // Supports AMD64 + ARM64
 
 ---
 
-## Future Direction: Tokenized Onboarding
+## Evolution Roadmap
+
+### Current: Phase 1.1 — Local Administration
+
+The proxy is now fully administrable locally:
+
+**Implemented:**
+- Version visible in API, dashboard footer, and Admin tab
+- Admin endpoints (`/admin/info`, `/admin/logs`, `/admin/check-update`)
+- Interactive admin menu (`deploy-menu.sh`)
+- Robust update script with 7-step process
+- Dashboard Admin tab with system info and logs
+- Configuration backups during updates
+
+**Admin Tools:**
+| Tool | Purpose |
+|------|---------|
+| `deploy-menu.sh` | Interactive admin/deployment menu |
+| `scripts/update.sh` | Non-interactive robust update |
+| `scripts/doctor.sh` | System diagnostics |
+| Dashboard Admin tab | Web-based monitoring |
+
+---
+
+## Future: Phase 2 — Tokenized Onboarding
 
 Phase 2 will introduce a cloud-connected onboarding flow:
 

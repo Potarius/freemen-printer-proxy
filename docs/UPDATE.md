@@ -11,13 +11,61 @@ cd freemen-printer-proxy
 ./scripts/update.sh
 ```
 
-This script will:
-1. Check for local changes
-2. Pull latest code from Git
-3. Backup your `.env` file
-4. Stop the running container
-5. Rebuild with new code
-6. Restart the service
+Or use the interactive menu:
+
+```bash
+./deploy-menu.sh
+# Then select option 'u' for update
+```
+
+The update script performs a **7-step robust process**:
+
+1. Check prerequisites (Docker, permissions)
+2. Check for local changes (prompts if found)
+3. Backup configuration (.env and printer config)
+4. Pull latest code from Git
+5. Stop the running container
+6. Rebuild and restart container
+7. Verify service health
+
+### Force Mode
+
+Skip confirmation prompts (for automation):
+
+```bash
+./scripts/update.sh --force
+```
+
+### Checking Version
+
+Before updating, check your current version:
+
+- **Dashboard**: Look at the footer or Admin tab
+- **API**: `curl http://localhost:6500/health | jq .version`
+- **CLI**: `grep '"version"' package.json`
+
+---
+
+## Interactive Admin Menu
+
+The `deploy-menu.sh` script provides an interactive menu:
+
+```bash
+./deploy-menu.sh
+```
+
+**Options:**
+| Key | Action |
+|-----|--------|
+| 1 | Full deployment (pull + build + restart) |
+| 2 | Quick restart (stop + start) |
+| 3-6 | Individual operations (pull/build/stop/start) |
+| 7 | View logs |
+| 8 | View status |
+| 9 | Rebuild + restart (no pull) |
+| u | Run update script |
+| d | Run diagnostics |
+| 0 | Quit |
 
 ---
 

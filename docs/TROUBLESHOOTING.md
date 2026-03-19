@@ -4,6 +4,8 @@ Common issues and solutions for Freemen Printer Proxy.
 
 ## Quick Diagnostics
 
+### Command-Line Diagnostics
+
 Run the built-in diagnostic tool:
 
 ```bash
@@ -17,6 +19,23 @@ This checks:
 - Configuration files
 - Network connectivity
 - Service health
+
+### Interactive Admin Menu
+
+For interactive troubleshooting:
+
+```bash
+./deploy-menu.sh
+# Then select 'd' for diagnostics or '8' for status
+```
+
+### Dashboard Admin Tab
+
+Open the web dashboard and go to the **Admin** tab to see:
+- Current version
+- Uptime and memory usage
+- Recent logs
+- System information
 
 ---
 

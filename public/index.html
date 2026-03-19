@@ -647,6 +647,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         Configuration
       </button>
+      <button class="tab" data-tab="admin" onclick="switchTab('admin')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Admin
+      </button>
     </div>
     
     <!-- Dashboard Tab -->
@@ -886,8 +890,147 @@
       </div>
     </div><!-- End Config Tab -->
     
+    <!-- Admin Tab -->
+    <div class="tab-content" id="tab-admin">
+      <div class="grid">
+        <!-- System Info Card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Informations système</span>
+            <button class="btn btn-secondary" onclick="loadAdminInfo()" style="padding: 8px 16px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="printer-info" style="border-top: none; padding-top: 0; margin-top: 0;">
+            <div class="info-row">
+              <span class="info-label">Version</span>
+              <span class="info-value" id="admin-version" style="color: var(--success); font-weight: 600;">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Environnement</span>
+              <span class="info-value" id="admin-env">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Uptime</span>
+              <span class="info-value" id="admin-uptime">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Démarré le</span>
+              <span class="info-value" id="admin-start-time">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Node.js</span>
+              <span class="info-value" id="admin-node">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Plateforme</span>
+              <span class="info-value" id="admin-platform">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Mémoire</span>
+              <span class="info-value" id="admin-memory">—</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Actions Card -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Actions rapides</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn btn-secondary" onclick="checkForUpdates()" id="check-update-btn" style="justify-content: flex-start;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+                <path d="M21 3v5h-5"></path>
+              </svg>
+              Vérifier les mises à jour
+            </button>
+            <button class="btn btn-secondary" onclick="showRestartInfo()" style="justify-content: flex-start;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              Comment redémarrer
+            </button>
+            <button class="btn btn-secondary" onclick="viewLogs()" style="justify-content: flex-start;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              Voir les logs
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Update Info Card -->
+      <div class="card" style="margin-top: 24px;" id="update-info-card" style="display: none;">
+        <div class="card-header">
+          <span class="card-title">Mise à jour</span>
+        </div>
+        <div id="update-info-content">
+          <p style="color: var(--text-muted); font-size: 14px;">
+            Cliquez sur "Vérifier les mises à jour" pour voir les informations de version.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Logs Card -->
+      <div class="card" style="margin-top: 24px; display: none;" id="logs-card">
+        <div class="card-header">
+          <span class="card-title">Logs récents</span>
+          <button class="btn btn-secondary" onclick="document.getElementById('logs-card').style.display='none'" style="padding: 6px 12px; font-size: 12px;">
+            Fermer
+          </button>
+        </div>
+        <div id="logs-content" style="background: var(--bg); border-radius: 8px; padding: 12px; max-height: 300px; overflow-y: auto; font-family: 'SF Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--text-muted);">
+          Chargement...
+        </div>
+      </div>
+      
+      <!-- Admin Commands Reference -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <span class="card-title">Commandes SSH</span>
+        </div>
+        <div style="background: var(--bg); border-radius: 8px; padding: 16px; font-family: 'SF Mono', monospace; font-size: 13px;">
+          <div style="margin-bottom: 12px;">
+            <span style="color: var(--text-muted);"># Mise à jour complète</span><br>
+            <span style="color: var(--success);">./scripts/update.sh</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <span style="color: var(--text-muted);"># Menu admin interactif</span><br>
+            <span style="color: var(--success);">./deploy-menu.sh</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <span style="color: var(--text-muted);"># Diagnostics</span><br>
+            <span style="color: var(--success);">./scripts/doctor.sh</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <span style="color: var(--text-muted);"># Redémarrer le service</span><br>
+            <span style="color: var(--primary);">docker compose restart</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <span style="color: var(--text-muted);"># Voir les logs en temps réel</span><br>
+            <span style="color: var(--primary);">docker compose logs -f</span>
+          </div>
+          <div>
+            <span style="color: var(--text-muted);"># Statut des conteneurs</span><br>
+            <span style="color: var(--primary);">docker compose ps</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- End Admin Tab -->
+    
     <footer class="footer">
-      <p>Freemen Printer Proxy v1.0.0 • Propulsé par <a href="https://freemen.solutions">Freemen Solutions</a></p>
+      <p>Freemen Printer Proxy <span id="footer-version">v1.0.0</span> • Propulsé par <a href="https://freemen.solutions">Freemen Solutions</a></p>
     </footer>
   </div>
   
@@ -1759,6 +1902,147 @@
       showToast('Liste effacée', 'success');
     }
     
+    // ============================================
+    // ADMIN FUNCTIONS
+    // ============================================
+    
+    async function loadAdminInfo() {
+      try {
+        const res = await fetchWithAuth('/admin/info');
+        if (!res.ok) throw new Error('Erreur chargement infos admin');
+        
+        const data = await res.json();
+        
+        document.getElementById('admin-version').textContent = 'v' + data.version;
+        document.getElementById('admin-env').textContent = data.environment;
+        document.getElementById('admin-uptime').textContent = data.uptimeFormatted;
+        document.getElementById('admin-start-time').textContent = new Date(data.startTime).toLocaleString('fr-CA');
+        document.getElementById('admin-node').textContent = data.node;
+        document.getElementById('admin-platform').textContent = `${data.platform} (${data.arch})`;
+        document.getElementById('admin-memory').textContent = `${data.memory.used}/${data.memory.total} MB`;
+        
+        // Update footer version
+        document.getElementById('footer-version').textContent = 'v' + data.version;
+        
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+    
+    async function checkForUpdates() {
+      const btn = document.getElementById('check-update-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Vérification...';
+      
+      try {
+        const res = await fetchWithAuth('/admin/check-update');
+        if (!res.ok) throw new Error('Erreur vérification');
+        
+        const data = await res.json();
+        
+        const content = document.getElementById('update-info-content');
+        content.innerHTML = `
+          <div style="padding: 16px; background: var(--bg); border-radius: 8px;">
+            <div style="margin-bottom: 12px;">
+              <span style="color: var(--text-muted);">Version actuelle:</span>
+              <span style="color: var(--success); font-weight: 600; margin-left: 8px;">v${data.currentVersion}</span>
+            </div>
+            <div style="margin-bottom: 16px; color: var(--text-muted); font-size: 14px;">
+              ${data.message}
+            </div>
+            <div style="font-size: 13px;">
+              <div style="color: var(--text-muted); margin-bottom: 8px;">Pour mettre à jour:</div>
+              ${data.howToUpdate.map(step => `<div style="padding: 4px 0; color: var(--text);">• ${step}</div>`).join('')}
+            </div>
+          </div>
+        `;
+        
+        showToast('Infos de version chargées', 'success');
+        
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+          </svg>
+          Vérifier les mises à jour
+        `;
+      }
+    }
+    
+    async function showRestartInfo() {
+      try {
+        const res = await fetchWithAuth('/admin/restart-info');
+        if (!res.ok) throw new Error('Erreur chargement');
+        
+        const data = await res.json();
+        
+        const content = document.getElementById('update-info-content');
+        content.innerHTML = `
+          <div style="padding: 16px; background: var(--bg); border-radius: 8px;">
+            <div style="margin-bottom: 12px; color: var(--warning);">
+              ⚠️ ${data.reason}
+            </div>
+            <div style="font-size: 13px;">
+              <div style="color: var(--text-muted); margin-bottom: 8px;">Instructions:</div>
+              ${data.instructions.map(step => `<div style="padding: 4px 0; color: var(--text);">• ${step}</div>`).join('')}
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: var(--surface-hover); border-radius: 6px; font-family: 'SF Mono', monospace; font-size: 12px;">
+              <div style="color: var(--text-muted); margin-bottom: 8px;">Commandes:</div>
+              <div style="color: var(--primary);">${data.commands.restart}</div>
+            </div>
+          </div>
+        `;
+        
+      } catch (err) {
+        showToast('Erreur: ' + err.message, 'error');
+      }
+    }
+    
+    async function viewLogs() {
+      const card = document.getElementById('logs-card');
+      const content = document.getElementById('logs-content');
+      
+      card.style.display = 'block';
+      content.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
+      
+      try {
+        const res = await fetchWithAuth('/admin/logs?limit=50');
+        if (!res.ok) throw new Error('Erreur chargement logs');
+        
+        const data = await res.json();
+        
+        if (data.lines && data.lines.length > 0) {
+          content.innerHTML = data.lines.map(line => {
+            // Color code log levels
+            let color = 'var(--text-muted)';
+            if (line.includes('"level":"error"') || line.includes('[ERROR]')) color = 'var(--danger)';
+            else if (line.includes('"level":"warn"') || line.includes('[WARN]')) color = 'var(--warning)';
+            else if (line.includes('"level":"info"') || line.includes('[INFO]')) color = 'var(--primary)';
+            
+            return `<div style="color: ${color}; word-break: break-all;">${escapeHtml(line)}</div>`;
+          }).join('');
+          
+          // Scroll to bottom
+          content.scrollTop = content.scrollHeight;
+        } else {
+          content.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Aucun log disponible</div>';
+        }
+        
+      } catch (err) {
+        content.innerHTML = `<div style="color: var(--danger);">Erreur: ${err.message}</div>`;
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
     // Close modal on overlay click
     document.getElementById('edit-modal').addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-overlay')) {
@@ -1770,6 +2054,9 @@
     refreshStatus();
     loadStats();
     renderQueue();
+    
+    // Load admin info on page load (for footer version)
+    loadAdminInfo();
     
     // Auto-refresh every 30s
     setInterval(() => {
