@@ -27,6 +27,12 @@ device.env
 docker-compose.override.yml
 docker-compose.cloudflare.yml
 
+# Provisioner App (Tauri)
+apps/provisioner/node_modules/
+apps/provisioner/dist/
+apps/provisioner/src-tauri/target/
+apps/provisioner/src-tauri/Cargo.lock
+
 # OS
 .DS_Store
 Thumbs.db
