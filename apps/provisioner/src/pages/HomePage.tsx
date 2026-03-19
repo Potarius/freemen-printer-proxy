@@ -25,7 +25,7 @@ export function HomePage() {
       </div>
 
       {/* Quick Action */}
-      <div className="card-hover cursor-pointer mb-8 group" onClick={() => navigate('/provision')}>
+      <div className="card-hover cursor-pointer mb-8 group" onClick={() => navigate('/wizard')}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-freemen-600/20 flex items-center justify-center">

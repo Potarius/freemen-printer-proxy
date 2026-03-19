@@ -3,15 +3,11 @@
  * Provides the app shell with navigation
  */
 
-import { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Titlebar } from './Titlebar';
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-export function Layout({ children }: LayoutProps) {
+export function Layout() {
   return (
     <div className="flex flex-col h-screen bg-surface-950">
       {/* Custom titlebar for Tauri */}
@@ -24,7 +20,7 @@ export function Layout({ children }: LayoutProps) {
         {/* Main content */}
         <main className="flex-1 overflow-auto p-8">
           <div className="max-w-5xl mx-auto animate-fade-in">
-            {children}
+            <Outlet />
           </div>
         </main>
       </div>

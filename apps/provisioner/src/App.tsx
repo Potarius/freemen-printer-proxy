@@ -3,16 +3,21 @@ import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
 import { ProvisionPage } from './pages/ProvisionPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { WizardPage } from './pages/WizardPage';
 
 function App() {
   return (
-    <Layout>
-      <Routes>
+    <Routes>
+      {/* Wizard has its own layout */}
+      <Route path="/wizard" element={<WizardPage />} />
+      
+      {/* Main app layout */}
+      <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/provision" element={<ProvisionPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
-    </Layout>
+      </Route>
+    </Routes>
   );
 }
 
