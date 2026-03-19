@@ -100,6 +100,7 @@ export function WizardPage() {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [provisionError, setProvisionError] = useState<string | undefined>();
   const [deviceId, setDeviceId] = useState('');
+  const [tunnelToken, setTunnelToken] = useState('');
 
   // Auto-select first account if only one
   useEffect(() => {
@@ -114,13 +115,13 @@ export function WizardPage() {
       case 1: // Target
         return !!targetPlatform;
       case 2: // Cloudflare (consolidated: auth + account + zone + hostname)
-        return isTokenValidated && !!selectedAccount && !!selectedZone && hostname.length >= 2 && tunnelName.length >= 3;
+        return isTokenValidated && !!selectedAccount && !!selectedZone && hostname.length >= 2 && tunnelName.length >= 3 && hostnameConfirmed;
       case 3: // Device
         return deviceName.length >= 2;
       default:
         return true;
     }
-  }, [targetPlatform, isTokenValidated, selectedAccount, selectedZone, hostname, tunnelName, deviceName]);
+  }, [targetPlatform, isTokenValidated, selectedAccount, selectedZone, hostname, tunnelName, hostnameConfirmed, deviceName]);
 
   const canProceed = validateStep(currentStep);
 
@@ -248,6 +249,7 @@ export function WizardPage() {
       if (!token) {
         throw new Error(cloudflareError?.message || 'Failed to get tunnel token');
       }
+      setTunnelToken(token);
 
       tasks[3].status = 'success';
       tasks[3].message = 'Configuration files generated';
@@ -335,6 +337,7 @@ export function WizardPage() {
     setDeviceName('Office Printer Proxy');
     setProvisionTasks(defaultProvisionTasks);
     setDeviceId('');
+    setTunnelToken('');
     setProvisionError(undefined);
   };
 
@@ -418,8 +421,10 @@ export function WizardPage() {
       case 6:
         return (
           <SuccessStep
+            targetPlatform={targetPlatform}
             hostname={`${hostname}.${selectedZone?.name || 'example.com'}`}
             tunnelName={tunnelName}
+            tunnelToken={tunnelToken}
             deviceId={deviceId}
             devicePackage={devicePackage}
             outputPath={writeResult?.outputPath}
