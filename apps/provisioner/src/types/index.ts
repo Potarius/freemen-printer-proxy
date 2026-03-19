@@ -257,6 +257,66 @@ export interface PiSetupStep {
 }
 
 // ============================================
+// UBUNTU DEPLOYMENT TYPES
+// ============================================
+
+export type DeploymentMode = 'fresh' | 'update' | 'reprovision';
+
+export interface DeploymentCommand {
+  id: string;
+  label: string;
+  command: string;
+  description: string;
+  category: 'prerequisite' | 'setup' | 'deploy' | 'verify' | 'maintenance';
+  optional?: boolean;
+  dangerous?: boolean;
+}
+
+export interface DeploymentStep {
+  id: string;
+  title: string;
+  description: string;
+  commands: DeploymentCommand[];
+  status: 'pending' | 'active' | 'completed' | 'skipped';
+  estimatedTime?: string;
+}
+
+export interface UbuntuDeployConfig {
+  targetHost: string;
+  targetUser: string;
+  installPath: string;
+  deviceId?: string;
+  tunnelToken?: string;
+  apiKey?: string;
+  printerIp?: string;
+  printerPort?: number;
+}
+
+export interface DeploymentPackage {
+  id: string;
+  mode: DeploymentMode;
+  config: UbuntuDeployConfig;
+  steps: DeploymentStep[];
+  commands: DeploymentCommand[];
+  scripts: {
+    name: string;
+    description: string;
+    content: string;
+  }[];
+  createdAt: string;
+}
+
+export interface DeploymentSummary {
+  mode: DeploymentMode;
+  targetHost: string;
+  installPath: string;
+  totalCommands: number;
+  estimatedTime: string;
+  hasCloudflare: boolean;
+  hasPrinter: boolean;
+}
+
+// ============================================
 // UI TYPES
 // ============================================
 
