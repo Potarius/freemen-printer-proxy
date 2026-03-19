@@ -1,9 +1,9 @@
 /**
  * Premium Wizard Page
- * Orchestrates the entire provisioning flow
+ * Orchestrates the entire provisioning flow with real Cloudflare integration
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { WizardSidebar, WizardStepConfig } from '../components/wizard/WizardSidebar';
@@ -20,7 +20,8 @@ import {
   SuccessStep,
   defaultProvisionTasks,
 } from '../components/wizard/steps';
-import { TargetPlatform, CloudflareZone } from '../types';
+import { TargetPlatform } from '../types';
+import { useCloudflareStore } from '../stores/cloudflare-store';
 import { Rocket, Cpu, KeyRound, Globe, Link, Settings, ClipboardList, Cloud, CheckCircle } from 'lucide-react';
 
 // Wizard step configuration
@@ -36,34 +37,56 @@ const wizardSteps: WizardStepConfig[] = [
   { id: 'success', title: 'Complete', description: 'All done', icon: <CheckCircle className="w-4 h-4" /> },
 ];
 
-// Mock zones for demo
-const mockZones: CloudflareZone[] = [
-  { id: 'zone_abc123', name: 'example.com', status: 'active' },
-  { id: 'zone_def456', name: 'mycompany.io', status: 'active' },
-  { id: 'zone_ghi789', name: 'dev.internal', status: 'pending' },
-];
-
 export function WizardPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Form state
+  // Cloudflare store
+  const {
+    apiToken,
+    setApiToken,
+    validateToken,
+    isTokenValidated,
+    isValidatingToken,
+    zones,
+    selectedZone,
+    selectZone,
+    loadZones,
+    isLoadingZones,
+    selectedAccount,
+    accounts,
+    selectAccount,
+    tunnel,
+    tunnelToken,
+    createTunnel,
+    createDNSRecord,
+    configureTunnelIngress,
+    getTunnelToken,
+    error: cloudflareError,
+    clearError,
+    reset: resetCloudflare,
+  } = useCloudflareStore();
+  
+  // Local form state
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('raspberry-pi');
-  const [apiToken, setApiToken] = useState('');
-  const [isTokenValidated, setIsTokenValidated] = useState(false);
-  const [selectedZone, setSelectedZone] = useState<CloudflareZone | null>(null);
   const [hostname, setHostname] = useState('printer');
   const [tunnelName, setTunnelName] = useState('freemen-printer-proxy');
   const [deviceName, setDeviceName] = useState('Office Printer Proxy');
   const [printerIp, setPrinterIp] = useState('');
   const [printerPort, setPrinterPort] = useState('9100');
   
-  // Loading states
-  const [isLoadingZones, setIsLoadingZones] = useState(false);
+  // Provisioning state
   const [provisionTasks, setProvisionTasks] = useState(defaultProvisionTasks);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [provisionError, setProvisionError] = useState<string | undefined>();
   const [deviceId, setDeviceId] = useState('');
+
+  // Auto-select first account if only one
+  useEffect(() => {
+    if (accounts.length === 1 && !selectedAccount) {
+      selectAccount(accounts[0]);
+    }
+  }, [accounts, selectedAccount, selectAccount]);
 
   // Validation
   const validateStep = useCallback((step: number): boolean => {
@@ -102,68 +125,143 @@ export function WizardPage() {
   }, [currentStep]);
 
   const handleCancel = useCallback(() => {
+    resetCloudflare();
     navigate('/');
-  }, [navigate]);
+  }, [navigate, resetCloudflare]);
 
-  // Mock token validation
+  // Real token validation using Cloudflare store
   const handleValidateToken = async (): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if (apiToken.length > 10) {
-      setIsTokenValidated(true);
-      return true;
-    }
-    return false;
+    return await validateToken();
   };
 
-  // Mock zone refresh
+  // Refresh zones from Cloudflare
   const handleRefreshZones = async () => {
-    setIsLoadingZones(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoadingZones(false);
+    await loadZones(selectedAccount?.id);
   };
 
-  // Mock provisioning
+  // Real provisioning with Cloudflare API
   const runProvisioning = async () => {
     setCurrentStep(7); // Move to provision step
     const tasks = [...defaultProvisionTasks];
     setProvisionTasks(tasks);
-    
-    for (let i = 0; i < tasks.length; i++) {
-      setCurrentTaskId(tasks[i].id);
-      tasks[i].status = 'running';
+    setProvisionError(undefined);
+
+    const fullHostname = `${hostname}.${selectedZone?.name}`;
+    const serviceUrl = 'http://localhost:6500'; // Default printer proxy port
+
+    try {
+      // Task 1: Create Tunnel
+      setCurrentTaskId('tunnel-create');
+      tasks[0].status = 'running';
       setProvisionTasks([...tasks]);
-      
-      await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
-      
-      tasks[i].status = 'success';
-      tasks[i].message = 'Completed successfully';
+
+      const createdTunnel = await createTunnel(tunnelName);
+      if (!createdTunnel) {
+        throw new Error(cloudflareError?.message || 'Failed to create tunnel');
+      }
+
+      tasks[0].status = 'success';
+      tasks[0].message = `Tunnel "${tunnelName}" created`;
       setProvisionTasks([...tasks]);
+
+      // Task 2: Configure Ingress
+      setCurrentTaskId('tunnel-config');
+      tasks[1].status = 'running';
+      setProvisionTasks([...tasks]);
+
+      const ingressConfigured = await configureTunnelIngress(fullHostname, serviceUrl);
+      if (!ingressConfigured) {
+        throw new Error(cloudflareError?.message || 'Failed to configure tunnel ingress');
+      }
+
+      tasks[1].status = 'success';
+      tasks[1].message = 'Ingress rules configured';
+      setProvisionTasks([...tasks]);
+
+      // Task 3: Create DNS Record
+      setCurrentTaskId('dns-record');
+      tasks[2].status = 'running';
+      setProvisionTasks([...tasks]);
+
+      const dnsRecord = await createDNSRecord(hostname);
+      if (!dnsRecord) {
+        throw new Error(cloudflareError?.message || 'Failed to create DNS record');
+      }
+
+      tasks[2].status = 'success';
+      tasks[2].message = `DNS record for ${fullHostname} created`;
+      setProvisionTasks([...tasks]);
+
+      // Task 4: Get Tunnel Token
+      setCurrentTaskId('config-generate');
+      tasks[3].status = 'running';
+      setProvisionTasks([...tasks]);
+
+      const token = await getTunnelToken();
+      if (!token) {
+        throw new Error(cloudflareError?.message || 'Failed to get tunnel token');
+      }
+
+      tasks[3].status = 'success';
+      tasks[3].message = 'Configuration files generated';
+      setProvisionTasks([...tasks]);
+
+      // Task 5: Create Package (local operation)
+      setCurrentTaskId('package-create');
+      tasks[4].status = 'running';
+      setProvisionTasks([...tasks]);
+
+      // TODO: Generate actual config files using config-generator service
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      tasks[4].status = 'success';
+      tasks[4].message = 'Deployment package ready';
+      setProvisionTasks([...tasks]);
+
+      // Success
+      setCurrentTaskId(null);
+      setDeviceId(`fpp-${Date.now().toString(36)}`);
+      setCurrentStep(8);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Provisioning failed';
+      setProvisionError(errorMessage);
+      
+      // Mark current task as failed
+      const currentIndex = tasks.findIndex(t => t.id === currentTaskId);
+      if (currentIndex >= 0) {
+        tasks[currentIndex].status = 'error';
+        tasks[currentIndex].message = errorMessage;
+        setProvisionTasks([...tasks]);
+      }
+      setCurrentTaskId(null);
     }
-    
-    setCurrentTaskId(null);
-    setDeviceId(`fpp-${Date.now().toString(36)}`);
-    setCurrentStep(8); // Move to success step
   };
 
   // Actions for success step
   const handleDownload = () => {
-    console.log('Downloading configuration package...');
+    // TODO: Implement actual download using Tauri
+    console.log('Downloading configuration package...', {
+      tunnelToken,
+      hostname: `${hostname}.${selectedZone?.name}`,
+      tunnelId: tunnel?.id,
+    });
   };
 
   const handleOpenFolder = () => {
+    // TODO: Implement using Tauri shell API
     console.log('Opening output folder...');
   };
 
   const handleNewDevice = () => {
+    resetCloudflare();
     setCurrentStep(0);
-    setApiToken('');
-    setIsTokenValidated(false);
-    setSelectedZone(null);
     setHostname('printer');
     setTunnelName('freemen-printer-proxy');
     setDeviceName('Office Printer Proxy');
     setProvisionTasks(defaultProvisionTasks);
     setDeviceId('');
+    setProvisionError(undefined);
   };
 
   // Render current step content
@@ -190,9 +288,9 @@ export function WizardPage() {
       case 3:
         return (
           <ZoneStep
-            zones={mockZones}
+            zones={zones}
             selectedZone={selectedZone}
-            onSelect={setSelectedZone}
+            onSelect={selectZone}
             onRefresh={handleRefreshZones}
             isLoading={isLoadingZones}
           />

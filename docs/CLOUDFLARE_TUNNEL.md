@@ -62,9 +62,41 @@ Create an API token at [Cloudflare Dashboard → Profile → API Tokens](https:/
 
 ---
 
-## Quick Start (Windows)
+## Quick Start (Desktop Provisioner App)
 
-### 1. Open Provisioner
+The recommended method is to use the **Freemen Provisioner** desktop application:
+
+```bash
+cd apps/provisioner
+npm install
+npm run tauri:dev
+```
+
+This launches a premium wizard UI that guides you through:
+
+1. **Welcome** - Introduction to the provisioning process
+2. **Platform** - Select target (Raspberry Pi or Linux)
+3. **Authentication** - Enter and validate your Cloudflare API token
+4. **Domain** - Select from your available Cloudflare zones
+5. **Access** - Configure hostname and tunnel name
+6. **Device** - Set device name and optional printer settings
+7. **Review** - Confirm all settings before provisioning
+8. **Provision** - Watch real-time progress as resources are created
+9. **Complete** - Download configuration package
+
+### Benefits of Desktop App
+
+- **Premium UI** - Modern, intuitive wizard interface
+- **Real-time validation** - API token verified instantly
+- **Error handling** - Clear, actionable error messages
+- **Progress tracking** - Visual feedback during provisioning
+- **Security** - Token never stored in config files
+
+---
+
+## Quick Start (CLI - Windows)
+
+For command-line provisioning:
 
 ```powershell
 cd freemen-printer-proxy\tools\provisioner
@@ -77,7 +109,7 @@ Or with PowerShell:
 .\provision.ps1
 ```
 
-### 2. Follow the Interactive Prompts
+### CLI Interactive Prompts
 
 1. Enter your Cloudflare API Token
 2. Select your Cloudflare account
@@ -85,13 +117,13 @@ Or with PowerShell:
 4. Enter a hostname (e.g., `printer.yourdomain.com`)
 5. Choose target platform (Raspberry Pi or Linux)
 
-### 3. Deploy to Device
+### Deploy to Device
 
 The provisioner generates a folder with all needed files. Copy it to your device and run the setup script.
 
 ---
 
-## Quick Start (Mac/Linux)
+## Quick Start (CLI - Mac/Linux)
 
 ```bash
 cd freemen-printer-proxy/tools/provisioner

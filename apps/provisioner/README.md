@@ -76,57 +76,84 @@ npm run tauri:build
 
 ## Features
 
-### Implemented (Phase 1.3)
+### Implemented (Phase 1.5)
 
 - [x] App shell with navigation
-- [x] Premium dark theme
-- [x] Wizard step system
-- [x] Cloudflare service (mockable)
+- [x] Premium dark theme with Freemen branding
+- [x] 9-step premium wizard UI
+- [x] **Real Cloudflare API integration**
+- [x] API token validation with user-friendly errors
+- [x] Zone/domain listing from Cloudflare
+- [x] Remotely-managed tunnel creation
+- [x] DNS record creation (CNAME)
+- [x] Tunnel ingress configuration
+- [x] Tunnel token retrieval
+- [x] Zustand state management with cloudflare-store
+- [x] Comprehensive error handling
 - [x] Config generator service
-- [x] Zustand state management
 - [x] Home page with quick actions
-- [x] Provision wizard (6 steps)
 - [x] Settings page
 
 ### Pending
 
-- [ ] Real Cloudflare API integration
-- [ ] File system operations via Tauri
-- [ ] Build and package for Windows
+- [ ] File system operations via Tauri commands
+- [ ] Build and package for Windows/Mac/Linux
 - [ ] Auto-update system
+- [ ] Secure token storage (keychain)
 
 ## Pages
 
 | Route | Description |
 |-------|-------------|
 | `/` | Home — Quick actions, features |
-| `/provision` | Provision wizard — 6-step flow |
+| `/wizard` | **Premium Wizard** — 9-step provisioning flow |
+| `/provision` | Legacy provision page |
 | `/settings` | Settings — Preferences |
 
-## Wizard Steps
+## Wizard Steps (Phase 1.5)
 
-1. **Authentication** — Enter Cloudflare API token
-2. **Account** — Select Cloudflare account
-3. **Domain** — Choose zone/domain
-4. **Device** — Configure device name, hostname, platform
-5. **Tunnel** — Create Cloudflare Tunnel
-6. **Complete** — Download config package
+| Step | Title | Description |
+|------|-------|-------------|
+| 1 | Welcome | Introduction with feature highlights |
+| 2 | Platform | Select Raspberry Pi or Linux |
+| 3 | Authentication | Enter & validate Cloudflare API token |
+| 4 | Domain | Select zone from Cloudflare account |
+| 5 | Access | Configure hostname and tunnel name |
+| 6 | Device | Set device name and printer config |
+| 7 | Review | Summary of all settings |
+| 8 | Provision | Real-time progress with task tracking |
+| 9 | Complete | Success page with download options |
 
 ## Services
 
-### CloudflareService
+### CloudflareService (Real API)
 
-Real API integration with Cloudflare:
-- `verifyToken()` — Validate API token
-- `getAccounts()` — List accounts
-- `getZones()` — List domains
-- `createTunnel()` — Create tunnel
-- `getTunnelToken()` — Get tunnel token
-- `createTunnelDNS()` — Create CNAME record
+Full Cloudflare API v4 integration:
+
+```typescript
+interface ICloudflareService {
+  verifyToken(): Promise<CloudflareTokenStatus>;
+  getAccounts(): Promise<CloudflareAccount[]>;
+  getZones(accountId?: string): Promise<CloudflareZone[]>;
+  getTunnels(accountId: string): Promise<CloudflareTunnel[]>;
+  createTunnel(accountId: string, name: string): Promise<CloudflareTunnel>;
+  getTunnelToken(accountId: string, tunnelId: string): Promise<string>;
+  createDNSRecord(zoneId: string, subdomain: string, tunnelId: string): Promise<CloudflareDNSRecord>;
+  configureTunnelIngress(accountId: string, tunnelId: string, hostname: string, serviceUrl: string): Promise<void>;
+}
+```
+
+**Error Handling:**
+- `CloudflareApiException` — API errors with user-friendly messages
+- `NetworkException` — Connection errors
+- Automatic error code mapping to actionable messages
 
 ### MockCloudflareService
 
-Development mock with simulated delays.
+Development mock with simulated delays. Enable with:
+```bash
+VITE_USE_MOCK_CLOUDFLARE=true npm run dev
+```
 
 ### ConfigGeneratorService
 
@@ -135,6 +162,26 @@ Generates device config files:
 - `device.env` — Environment variables
 - `docker-compose.cloudflare.yml` — Docker Compose
 - `setup.sh` — Platform setup script
+
+## Cloudflare Store (Zustand)
+
+State management for Cloudflare operations:
+
+```typescript
+// stores/cloudflare-store.ts
+const {
+  apiToken, setApiToken,
+  validateToken,           // Validates token and loads accounts/zones
+  isTokenValidated,
+  zones, selectedZone, selectZone,
+  accounts, selectedAccount, selectAccount,
+  createTunnel,           // Creates remotely-managed tunnel
+  createDNSRecord,        // Creates CNAME pointing to tunnel
+  configureTunnelIngress, // Sets up ingress rules
+  getTunnelToken,         // Retrieves token for cloudflared
+  error, clearError,
+  reset,                  // Clears all state (for new device)
+} = useCloudflareStore();
 
 ## Styling
 

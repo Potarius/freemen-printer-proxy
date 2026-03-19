@@ -28,12 +28,18 @@ export interface DeviceProvisionResult {
 export interface CloudflareAccount {
   id: string;
   name: string;
+  type?: string;
 }
 
 export interface CloudflareZone {
   id: string;
   name: string;
   status: string;
+  account?: {
+    id: string;
+    name: string;
+  };
+  name_servers?: string[];
 }
 
 export interface CloudflareTunnel {
@@ -41,6 +47,17 @@ export interface CloudflareTunnel {
   name: string;
   status: string;
   createdAt: string;
+  account_tag?: string;
+  connections?: CloudflareTunnelConnection[];
+}
+
+export interface CloudflareTunnelConnection {
+  id: string;
+  is_pending_reconnect: boolean;
+  client_id: string;
+  client_version: string;
+  opened_at: string;
+  origin_ip: string;
 }
 
 export interface CloudflareTunnelConfig {
@@ -53,6 +70,41 @@ export interface CloudflareTunnelConfig {
     token: string;
   };
   hostname: string;
+}
+
+export interface CloudflareDNSRecord {
+  id: string;
+  type: string;
+  name: string;
+  content: string;
+  proxied: boolean;
+  ttl: number;
+}
+
+export interface CloudflareTokenStatus {
+  id: string;
+  status: 'active' | 'disabled' | 'expired';
+  not_before?: string;
+  expires_on?: string;
+}
+
+export interface CloudflareApiError {
+  code: number;
+  message: string;
+  error_chain?: CloudflareApiError[];
+}
+
+export interface CloudflareApiResponse<T> {
+  success: boolean;
+  errors: CloudflareApiError[];
+  messages: string[];
+  result: T;
+  result_info?: {
+    page: number;
+    per_page: number;
+    total_count: number;
+    total_pages: number;
+  };
 }
 
 // ============================================
