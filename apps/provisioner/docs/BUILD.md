@@ -43,6 +43,39 @@ npm run tauri:dev
 
 The development server runs at `http://localhost:1420`
 
+### Using the Dev Helper Script (Windows)
+
+For a smoother dev experience, use the helper script:
+
+```powershell
+# Start Tauri dev (handles port conflicts)
+.\scripts\dev-start.ps1
+
+# Start web-only mode
+.\scripts\dev-start.ps1 -Web
+
+# Force kill any process on port 1420 and start
+.\scripts\dev-start.ps1 -Force
+
+# Show help
+.\scripts\dev-start.ps1 -Help
+```
+
+### Port Conflict Resolution
+
+If port 1420 is already in use:
+
+```powershell
+# Find what's using the port
+netstat -ano | findstr :1420
+
+# Or use PowerShell
+Get-NetTCPConnection -LocalPort 1420
+
+# Kill the process (replace PID)
+taskkill /F /PID <process_id>
+```
+
 ### Development URLs
 
 | URL | Description |
@@ -213,6 +246,28 @@ First builds are slow due to Rust compilation. Subsequent builds are faster.
 # Use release profile for smaller binaries
 npm run tauri:build -- --release
 ```
+
+### Dev Server Port Already in Use
+
+If you see "beforeDevCommand terminated with non-zero status":
+
+1. **Use the helper script**: `.\scripts\dev-start.ps1 -Force`
+2. **Or manually kill the process**:
+   ```powershell
+   # Find and kill process on port 1420
+   $pid = (Get-NetTCPConnection -LocalPort 1420).OwningProcess
+   Stop-Process -Id $pid -Force
+   ```
+3. **Check for zombie Vite processes**:
+   ```powershell
+   Get-Process | Where-Object {$_.ProcessName -like "*node*"} | Stop-Process -Force
+   ```
+
+### Tauri Dev Hangs or Shows Blank Window
+
+1. Ensure Vite is running: check `http://localhost:1420` in browser
+2. Clear Vite cache: `rm -rf node_modules/.vite`
+3. Restart: `npm run tauri:dev`
 
 ---
 

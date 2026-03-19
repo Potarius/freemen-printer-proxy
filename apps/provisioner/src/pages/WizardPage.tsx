@@ -11,27 +11,23 @@ import { Button } from '../components/ui/Button';
 import {
   WelcomeStep,
   TargetStep,
-  AuthStep,
-  ZoneStep,
-  HostnameStep,
+  CloudflareFlowStep,
   DeviceStep,
   SummaryStep,
   ProvisionStep,
   SuccessStep,
   defaultProvisionTasks,
 } from '../components/wizard/steps';
-import type { TargetPlatform, DevicePackage, DevicePackageFile } from '../types';
+import type { TargetPlatform, DevicePackageFile } from '../types';
 import { useCloudflareStore } from '../stores/cloudflare-store';
 import { usePackageStore, createPackageConfig } from '../stores/package-store';
-import { Rocket, Cpu, KeyRound, Globe, Link, Settings, ClipboardList, Cloud, CheckCircle } from 'lucide-react';
+import { Rocket, Cpu, Settings, ClipboardList, Cloud, CheckCircle } from 'lucide-react';
 
-// Wizard step configuration
+// Wizard step configuration - consolidated Cloudflare flow
 const wizardSteps: WizardStepConfig[] = [
   { id: 'welcome', title: 'Welcome', description: 'Get started', icon: <Rocket className="w-4 h-4" /> },
   { id: 'target', title: 'Platform', description: 'Select target', icon: <Cpu className="w-4 h-4" /> },
-  { id: 'auth', title: 'Authentication', description: 'Cloudflare API', icon: <KeyRound className="w-4 h-4" /> },
-  { id: 'zone', title: 'Domain', description: 'Select zone', icon: <Globe className="w-4 h-4" /> },
-  { id: 'hostname', title: 'Access', description: 'Configure URL', icon: <Link className="w-4 h-4" /> },
+  { id: 'cloudflare', title: 'Cloudflare', description: 'Connect & configure', icon: <Cloud className="w-4 h-4" /> },
   { id: 'device', title: 'Device', description: 'Settings', icon: <Settings className="w-4 h-4" /> },
   { id: 'summary', title: 'Review', description: 'Confirm setup', icon: <ClipboardList className="w-4 h-4" /> },
   { id: 'provision', title: 'Provision', description: 'Create resources', icon: <Cloud className="w-4 h-4" /> },
@@ -57,8 +53,7 @@ export function WizardPage() {
     selectedAccount,
     accounts,
     selectAccount,
-    tunnel,
-    tunnelToken,
+    isLoadingAccounts,
     createTunnel,
     createDNSRecord,
     configureTunnelIngress,
@@ -102,30 +97,26 @@ export function WizardPage() {
     }
   }, [accounts, selectedAccount, selectAccount]);
 
-  // Validation
+  // Validation - updated for consolidated Cloudflare flow
   const validateStep = useCallback((step: number): boolean => {
     switch (step) {
       case 1: // Target
         return !!targetPlatform;
-      case 2: // Auth
-        return isTokenValidated;
-      case 3: // Zone
-        return !!selectedZone;
-      case 4: // Hostname
-        return hostname.length >= 2 && tunnelName.length >= 3;
-      case 5: // Device
+      case 2: // Cloudflare (consolidated: auth + account + zone + hostname)
+        return isTokenValidated && !!selectedAccount && !!selectedZone && hostname.length >= 2 && tunnelName.length >= 3;
+      case 3: // Device
         return deviceName.length >= 2;
       default:
         return true;
     }
-  }, [targetPlatform, isTokenValidated, selectedZone, hostname, tunnelName, deviceName]);
+  }, [targetPlatform, isTokenValidated, selectedAccount, selectedZone, hostname, tunnelName, deviceName]);
 
   const canProceed = validateStep(currentStep);
 
-  // Navigation
+  // Navigation - updated step indices
   const handleNext = useCallback(async () => {
-    if (currentStep === 6) {
-      // Start provisioning
+    if (currentStep === 4) {
+      // Start provisioning from summary step
       await runProvisioning();
     } else if (currentStep < wizardSteps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -155,7 +146,7 @@ export function WizardPage() {
 
   // Real provisioning with Cloudflare API
   const runProvisioning = async () => {
-    setCurrentStep(7); // Move to provision step
+    setCurrentStep(5); // Move to provision step (index 5)
     const tasks = [...defaultProvisionTasks];
     setProvisionTasks(tasks);
     setProvisionError(undefined);
@@ -258,7 +249,7 @@ export function WizardPage() {
       // Success
       setCurrentTaskId(null);
       setDeviceId(generatedDeviceId);
-      setCurrentStep(8);
+      setCurrentStep(6); // Success step (index 6)
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Provisioning failed';
@@ -304,7 +295,7 @@ export function WizardPage() {
     setProvisionError(undefined);
   };
 
-  // Render current step content
+  // Render current step content - consolidated flow
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -317,35 +308,32 @@ export function WizardPage() {
           />
         );
       case 2:
+        // Premium Cloudflare assisted flow (replaces auth, zone, hostname steps)
         return (
-          <AuthStep
-            value={apiToken}
-            onChange={setApiToken}
-            onValidate={handleValidateToken}
-            isValidated={isTokenValidated}
+          <CloudflareFlowStep
+            apiToken={apiToken}
+            onApiTokenChange={setApiToken}
+            onValidateToken={handleValidateToken}
+            isTokenValidated={isTokenValidated}
+            isValidatingToken={isValidatingToken}
+            accounts={accounts}
+            selectedAccount={selectedAccount}
+            onSelectAccount={selectAccount}
+            isLoadingAccounts={isLoadingAccounts}
+            zones={zones}
+            selectedZone={selectedZone}
+            onSelectZone={selectZone}
+            onRefreshZones={handleRefreshZones}
+            isLoadingZones={isLoadingZones}
+            hostname={hostname}
+            onHostnameChange={setHostname}
+            tunnelName={tunnelName}
+            onTunnelNameChange={setTunnelName}
+            error={cloudflareError}
+            onClearError={clearError}
           />
         );
       case 3:
-        return (
-          <ZoneStep
-            zones={zones}
-            selectedZone={selectedZone}
-            onSelect={selectZone}
-            onRefresh={handleRefreshZones}
-            isLoading={isLoadingZones}
-          />
-        );
-      case 4:
-        return (
-          <HostnameStep
-            hostname={hostname}
-            tunnelName={tunnelName}
-            zoneName={selectedZone?.name || 'example.com'}
-            onHostnameChange={setHostname}
-            onTunnelNameChange={setTunnelName}
-          />
-        );
-      case 5:
         return (
           <DeviceStep
             deviceName={deviceName}
@@ -356,7 +344,7 @@ export function WizardPage() {
             onPrinterPortChange={setPrinterPort}
           />
         );
-      case 6:
+      case 4:
         return (
           <SummaryStep
             platform={targetPlatform}
@@ -366,7 +354,7 @@ export function WizardPage() {
             deviceName={deviceName}
           />
         );
-      case 7:
+      case 5:
         return (
           <ProvisionStep
             tasks={provisionTasks}
@@ -374,7 +362,7 @@ export function WizardPage() {
             error={provisionError}
           />
         );
-      case 8:
+      case 6:
         return (
           <SuccessStep
             hostname={`${hostname}.${selectedZone?.name || 'example.com'}`}
@@ -395,8 +383,7 @@ export function WizardPage() {
   };
 
   const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === wizardSteps.length - 1;
-  const isProvisioningOrComplete = currentStep >= 7;
+  const isProvisioningOrComplete = currentStep >= 5; // Provision is step 5, success is step 6
 
   return (
     <div className="flex h-screen bg-surface-950">
