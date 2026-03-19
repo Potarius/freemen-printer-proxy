@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Wifi, WifiOff, Globe, Eye, EyeOff, Ethernet } from 'lucide-react';
+import { Wifi, WifiOff, Globe, Eye, EyeOff, Cable } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { WIFI_COUNTRIES } from '../../../services/pi-setup-service';
@@ -93,7 +93,7 @@ export function PiNetworkStep({
               : 'bg-surface-900/30 border-surface-800 hover:border-surface-700'
           }`}
         >
-          <Ethernet className={`w-8 h-8 mb-3 ${!useWifi ? 'text-freemen-400' : 'text-surface-500'}`} />
+          <Cable className={`w-8 h-8 mb-3 ${!useWifi ? 'text-freemen-400' : 'text-surface-500'}`} />
           <h3 className={`font-semibold mb-1 ${!useWifi ? 'text-white' : 'text-surface-300'}`}>
             Ethernet
           </h3>
@@ -172,7 +172,7 @@ export function PiNetworkStep({
         </div>
       ) : (
         <div className="p-6 rounded-xl bg-surface-900/30 border border-surface-800 text-center">
-          <Ethernet className="w-12 h-12 text-surface-500 mx-auto mb-4" />
+          <Cable className="w-12 h-12 text-surface-500 mx-auto mb-4" />
           <h3 className="font-semibold text-white mb-2">Ethernet Connection</h3>
           <p className="text-surface-400 mb-4">
             Connect your Pi to your router with an Ethernet cable.

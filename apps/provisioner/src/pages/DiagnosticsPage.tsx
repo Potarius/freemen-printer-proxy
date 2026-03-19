@@ -480,9 +480,3 @@ export function DiagnosticsPage() {
   );
 }
 
-// Extend window type for Tauri detection
-declare global {
-  interface Window {
-    __TAURI__?: unknown;
-  }
-}
