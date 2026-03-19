@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
+use sha_crypt::{sha512_simple, Sha512Params};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -268,108 +269,11 @@ async fn is_pi_boot_partition(path: String) -> Result<bool, String> {
 /// Generate SHA-512 encrypted password for Pi userconf.txt
 #[tauri::command]
 async fn hash_password(password: String) -> Result<String, String> {
-    #[cfg(target_os = "windows")]
-    {
-        hash_password_windows(&password).await
-    }
-    
-    #[cfg(not(target_os = "windows"))]
-    {
-        hash_password_unix(&password).await
-    }
-}
+    let params = Sha512Params::new(10_000)
+        .map_err(|e| format!("Failed to configure password hashing params: {}", e))?;
 
-#[cfg(target_os = "windows")]
-async fn hash_password_windows(password: &str) -> Result<String, String> {
-    // Try using OpenSSL if available, otherwise use Python
-    // First try openssl
-    let openssl_result = Command::new("openssl")
-        .args(["passwd", "-6", "-stdin"])
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn();
-        
-    if let Ok(mut child) = openssl_result {
-        use std::io::Write;
-        if let Some(mut stdin) = child.stdin.take() {
-            let _ = stdin.write_all(password.as_bytes());
-        }
-        
-        if let Ok(output) = child.wait_with_output() {
-            if output.status.success() {
-                let hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if hash.starts_with("$6$") {
-                    return Ok(hash);
-                }
-            }
-        }
-    }
-    
-    // Fallback to Python
-    let python_script = format!(
-        r#"import crypt; import secrets; salt = secrets.token_hex(8); print(crypt.crypt('{}', '$6$' + salt))"#,
-        password.replace("'", "\\'")
-    );
-    
-    let python_result = Command::new("python")
-        .args(["-c", &python_script])
-        .output();
-        
-    if let Ok(output) = python_result {
-        if output.status.success() {
-            let hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if hash.starts_with("$6$") {
-                return Ok(hash);
-            }
-        }
-    }
-    
-    // Try python3
-    let python3_result = Command::new("python3")
-        .args(["-c", &python_script])
-        .output();
-        
-    if let Ok(output) = python3_result {
-        if output.status.success() {
-            let hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if hash.starts_with("$6$") {
-                return Ok(hash);
-            }
-        }
-    }
-    
-    Err("Could not hash password. Please install OpenSSL or Python.".to_string())
-}
-
-#[cfg(not(target_os = "windows"))]
-async fn hash_password_unix(password: &str) -> Result<String, String> {
-    use std::io::Write;
-    
-    let mut child = Command::new("openssl")
-        .args(["passwd", "-6", "-stdin"])
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to run openssl: {}", e))?;
-        
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(password.as_bytes())
-            .map_err(|e| format!("Failed to write password: {}", e))?;
-    }
-    
-    let output = child.wait_with_output()
-        .map_err(|e| format!("Failed to get openssl output: {}", e))?;
-        
-    if output.status.success() {
-        let hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if hash.starts_with("$6$") {
-            return Ok(hash);
-        }
-    }
-    
-    Err("Failed to hash password with openssl".to_string())
+    sha512_simple(&password, &params)
+        .map_err(|e| format!("Failed to hash password: {}", e))
 }
 
 /// List files in a directory
