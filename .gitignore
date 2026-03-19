@@ -3,6 +3,8 @@ node_modules/
 
 # Environment
 .env
+.env.*
+!.env.example
 
 # Logs
 logs/
@@ -10,13 +12,37 @@ logs/
 
 # Data persistence
 data/
+!data/.gitkeep
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+._*
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / Testing
+coverage/
+.nyc_output/
+
+# Build artifacts
+dist/
+build/

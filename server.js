@@ -1051,7 +1051,7 @@ app.use((error, req, res, next) => {
 
 // Démarrage du serveur
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Freeman Printer Proxy démarré sur le port ${PORT}`);
+  logger.info(`🚀 Freemen Printer Proxy démarré sur le port ${PORT}`);
   logger.info(`🖨️  Imprimante: ${PRINTER_IP}:${PRINTER_PORT} (${PRINTER_PROTOCOL})`);
   logger.info(`🌐 Dashboard: http://localhost:${PORT}`);
   logger.info(`🔑 Mode: ${API_KEY === 'dev-key-change-in-production' ? 'DEVELOPMENT' : 'PRODUCTION'}`);

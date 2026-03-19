@@ -1,175 +1,201 @@
 # Freemen Printer Proxy
 
-Micro-service pour imprimer sur des imprimantes Brother QL et TD series via API REST. Idéal pour déployer sur Raspberry Pi avec Docker.
+Local proxy service for Brother QL and TD label printers. Exposes your network printer via REST API for seamless cloud integration.
 
-## ✨ Fonctionnalités
+**Supported platforms:** Raspberry Pi (headless) • Ubuntu/Debian • Any Linux with Docker
 
-- 🔍 **Scan réseau** — Découverte automatique des imprimantes Brother
-- 🖨️ **Multi-modèles** — Compatible QL-710W, QL-800, QL-820NWB, TD-4550DNWB, etc.
-- 🎨 **Dashboard web** — Interface de configuration et monitoring
-- 🔐 **API sécurisée** — Authentification par clé API
-- 📊 **Statistiques** — Suivi des impressions (jour/mois/total)
-- 🐳 **Docker ready** — Déploiement simple sur Raspberry Pi ou serveur
+---
 
-## 🏗️ Architecture
+## Features
 
-```
-Votre serveur/app → HTTPS/Tunnel → Printer Proxy → Imprimante Brother (réseau local)
-```
+- **Automatic Discovery** — Scan and detect Brother printers on your network
+- **Multi-Model Support** — Works with QL-710W, QL-800, QL-820NWB, TD-4550DNWB, and more
+- **Web Dashboard** — Configure and monitor from any browser
+- **Secure API** — Authentication via API key, rate limiting included
+- **Docker Ready** — Simple deployment on Raspberry Pi or server
+- **Print Statistics** — Track daily, monthly, and total print jobs
 
-## 🚀 Installation
+---
 
-### Option 1: Docker (recommandé)
+## Quick Start
 
-```bash
-# Cloner le dépôt
-git clone https://github.com/votre-user/freemen-printer-proxy.git
-cd freemen-printer-proxy
-
-# Configurer l'environnement
-cp .env.example .env
-nano .env  # Modifier API_KEY au minimum
-
-# Démarrer avec Docker Compose
-docker-compose up -d
-```
-
-Le dashboard est accessible sur `http://localhost:6500`
-
-### Option 2: Node.js
+### Automated Installation (Recommended)
 
 ```bash
-# Cloner et installer
-git clone https://github.com/votre-user/freemen-printer-proxy.git
+git clone https://github.com/freemen-solutions/freemen-printer-proxy.git
 cd freemen-printer-proxy
-npm install
 
-# Configurer
-cp .env.example .env
-nano .env
+# For standard Linux
+./scripts/install.sh
 
-# Démarrer
-npm start
+# For Raspberry Pi
+./scripts/install-pi.sh
 ```
 
-## 🍓 Déploiement Raspberry Pi
+The script handles Docker installation, configuration, and startup automatically.
 
-1. **Installer Ubuntu Server** sur votre Raspberry Pi
-2. **Installer Docker:**
-   ```bash
-   curl -fsSL https://get.docker.com | sh
-   sudo usermod -aG docker $USER
-   ```
-3. **Cloner et démarrer:**
-   ```bash
-   git clone https://github.com/votre-user/freemen-printer-proxy.git
-   cd freemen-printer-proxy
-   cp .env.example .env
-   nano .env  # Configurer API_KEY
-   docker-compose up -d
-   ```
-4. **Configurer un tunnel** (Cloudflare Tunnel, ngrok, etc.) pour accès distant
+### Manual Installation
 
-## ⚙️ Configuration
+```bash
+git clone https://github.com/freemen-solutions/freemen-printer-proxy.git
+cd freemen-printer-proxy
 
-### Variables d'environnement
+# Configure
+cp .env.example .env
+nano .env  # Set your API_KEY
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `PORT` | Port du serveur | `6500` |
-| `API_KEY` | Clé d'authentification API | `dev-key-...` |
-| `PRINTER_IP` | IP de l'imprimante (optionnel si scan) | `192.168.1.100` |
-| `PRINTER_PORT` | Port imprimante | `9100` |
-| `PRINTER_PROTOCOL` | `jetdirect` ou `ipp` | `jetdirect` |
+# Start with Docker
+docker compose up -d
+```
 
-### Configuration via Dashboard
+**Dashboard:** http://localhost:6500
 
-1. Accédez au dashboard (`http://localhost:6500`)
-2. Cliquez sur l'onglet **Configuration**
-3. Utilisez **Scan rapide** ou **Scan complet** pour trouver les imprimantes
-4. Sélectionnez votre imprimante pour la configurer
+---
 
-## 🖨️ Modèles compatibles
+## Supported Platforms
 
-### Série QL (Label Printers)
+| Platform | Architecture | Notes |
+|----------|--------------|-------|
+| Raspberry Pi 4/5 | ARM64 | Recommended for dedicated print server |
+| Raspberry Pi 3B+ | ARM64 | Use 64-bit OS |
+| Ubuntu/Debian | AMD64 | Server or desktop |
+| Any Linux | AMD64/ARM64 | With Docker support |
+
+---
+
+## Compatible Printers
+
+### QL Series (Label Printers)
 - QL-710W, QL-720NW
 - QL-800, QL-810W, QL-820NWB
 - QL-1100, QL-1110NWB
 
-### Série TD (Desktop Thermal)
+### TD Series (Desktop Thermal)
 - TD-4410D, TD-4420DN
 - TD-4520DN, TD-4550DNWB
 
-## 📋 API Endpoints
+---
 
-Tous les endpoints (sauf `/health` et `/models`) nécessitent le header `X-API-Key`.
+## Configuration
 
-| Endpoint | Méthode | Description |
+### Environment Variables
+
+| Variable | Default | Description |
 |----------|---------|-------------|
-| `/health` | GET | Santé du service |
-| `/status` | GET | Statut imprimante + service |
-| `/models` | GET | Liste des modèles compatibles |
-| `/config` | GET | Configuration actuelle |
-| `/config/printer` | POST | Définir l'imprimante active |
-| `/discover/quick` | GET | Scan rapide du réseau (~5s) |
-| `/discover` | GET | Scan complet du réseau (~1-2 min) |
-| `/test-printer` | POST | Tester une IP spécifique |
-| `/print/test` | POST | Imprimer une page de test |
-| `/print/qr` | POST | Imprimer un QR code |
+| `PORT` | `6500` | HTTP server port |
+| `API_KEY` | *(required)* | Authentication key |
+| `PRINTER_IP` | *(empty)* | Pre-configured printer IP |
+| `PRINTER_PORT` | `9100` | Printer port |
+| `PRINTER_PROTOCOL` | `jetdirect` | Protocol: `jetdirect` or `ipp` |
 
-### Exemple: Imprimer un QR code
+### Dashboard Configuration
+
+1. Open http://YOUR_IP:6500
+2. Enter your API key
+3. Go to **Configuration** tab
+4. Click **Quick Scan** to find printers
+5. Select your printer
+
+---
+
+## API Usage
+
+All endpoints except `/health` require the `X-API-Key` header.
+
+### Print a QR Code
 
 ```bash
 curl -X POST http://localhost:6500/print/qr \
-  -H "X-API-Key: votre-clé-api" \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "data": "https://example.com/product/12345",
+    "data": "https://example.com/item/12345",
     "labelSize": "medium",
-    "quantity": 1
+    "productName": "My Product",
+    "productNumber": "12345"
   }'
 ```
 
-**Tailles disponibles:**
-- `small` : 29×29mm (QR + numéro)
-- `medium` : 62×29mm (QR + nom + numéro)
-- `large` : 62×62mm (QR centré + texte)
+### Available Endpoints
 
-## � Structure du projet
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/health` | GET | No | Health check |
+| `/status` | GET | Yes | Detailed status |
+| `/config` | GET | Yes | Current configuration |
+| `/config/printer` | POST | Yes | Set active printer |
+| `/discover/quick` | GET | Yes | Quick network scan |
+| `/discover` | GET | Yes | Full network scan |
+| `/print/test` | POST | Yes | Test print |
+| `/print/qr` | POST | Yes | Print QR code label |
+| `/print/raw` | POST | Yes | Print raw data |
+
+---
+
+## Documentation
+
+- **[Install on Raspberry Pi](docs/INSTALL_RASPBERRY_PI.md)** — Complete Pi setup guide
+- **[Install on Linux](docs/INSTALL_LINUX.md)** — Server/desktop installation
+- **[Architecture](docs/ARCHITECTURE.md)** — Technical overview
+- **[Update Guide](docs/UPDATE.md)** — How to update
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions
+
+---
+
+## Project Structure
 
 ```
 freemen-printer-proxy/
-├── server.js           # Serveur Express principal
-├── docker-compose.yml  # Configuration Docker
-├── Dockerfile          # Image Docker
-├── .env.example        # Variables d'environnement
-├── lib/
-│   ├── printer.js      # Communication imprimante
-│   ├── discovery.js    # Scan réseau
-│   ├── config.js       # Persistance configuration
-│   └── printerModels.js # Base de données modèles
-├── middleware/
-│   └── rateLimiter.js  # Rate limiting
-├── public/
-│   └── index.html      # Dashboard web
-├── data/               # Configuration persistée
-└── logs/               # Logs applicatifs
+├── server.js              # Express application
+├── docker-compose.yml     # Docker configuration
+├── Dockerfile             # Docker image
+├── .env.example           # Environment template
+├── lib/                   # Core modules
+├── middleware/            # Express middleware
+├── public/                # Web dashboard
+├── scripts/               # Installation scripts
+├── docs/                  # Documentation
+├── data/                  # Persistent config (gitignored)
+└── logs/                  # Application logs (gitignored)
 ```
 
-## 🔐 Sécurité
+---
 
-- **Changez la clé API** — Ne gardez jamais la clé par défaut en production
-- **Utilisez un tunnel sécurisé** — Cloudflare Tunnel, ngrok, ou reverse proxy avec HTTPS
-- **Rate limiting inclus** — Protection contre les abus
+## Useful Commands
 
-## 🤝 Contribution
+```bash
+# View logs
+docker compose logs -f
 
-Les contributions sont les bienvenues! Ouvrez une issue ou une pull request.
+# Restart
+docker compose restart
 
-## 📄 Licence
+# Stop
+docker compose down
+
+# Update
+./scripts/update.sh
+
+# Diagnostics
+./scripts/doctor.sh
+```
+
+---
+
+## Security Notes
+
+- **Change the default API key** — Generate a secure key for production
+- **Local network only** — The service is designed for local access
+- **Use a tunnel for remote access** — Cloudflare Tunnel, Tailscale, or similar
+
+---
+
+## License
 
 MIT
 
-## 👤 Auteur
+---
+
+## Author
 
 [Freemen Solutions](https://freemen.solutions)

@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  printer-proxy:
+  freemen-printer-proxy:
     build: .
-    container_name: printer-proxy
+    container_name: freemen-printer-proxy
     restart: unless-stopped
     ports:
       - "6500:6500"
     environment:
       - NODE_ENV=production
       - PORT=6500
-      - API_KEY=${API_KEY:-035203b28460a8a17e3d3d573a7abef93aab8cc02dab9fd7e8914df71748c112}
+      - API_KEY=${API_KEY:?API_KEY must be set in .env file}
       - PRINTER_IP=${PRINTER_IP:-}
       - PRINTER_PORT=${PRINTER_PORT:-9100}
       - PRINTER_PROTOCOL=${PRINTER_PROTOCOL:-jetdirect}
@@ -20,10 +20,10 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
     networks:
-      - freeman-printer-proxy
+      - freemen-printer-proxy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 networks:
-  freeman-printer-proxy:
+  freemen-printer-proxy:
     driver: bridge

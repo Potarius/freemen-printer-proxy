@@ -1,25 +1,44 @@
+# Freemen Printer Proxy
+# Multi-architecture Docker image (AMD64 + ARM64)
+# Compatible with: Linux servers, Raspberry Pi, and other ARM64 devices
+
 FROM node:20-alpine
+
+LABEL org.opencontainers.image.title="Freemen Printer Proxy"
+LABEL org.opencontainers.image.description="Local proxy for Brother QL/TD label printers"
+LABEL org.opencontainers.image.vendor="Freemen Solutions"
+LABEL org.opencontainers.image.source="https://github.com/freemen-solutions/freemen-printer-proxy"
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
+# Install system dependencies for network scanning
+RUN apk add --no-cache wget
+
+# Copy dependency files
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm ci --only=production
+# Install production dependencies only
+RUN npm ci --only=production && npm cache clean --force
 
-# Copier le reste du code
-COPY . .
+# Copy application code
+COPY server.js ./
+COPY lib/ ./lib/
+COPY middleware/ ./middleware/
+COPY public/ ./public/
 
-# Créer les dossiers nécessaires
-RUN mkdir -p logs data
+# Create required directories with proper permissions
+RUN mkdir -p logs data && \
+    chown -R node:node /app
 
-# Port exposé
+# Use non-root user for security
+USER node
+
+# Expose application port
 EXPOSE 6500
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:6500/health || exit 1
 
-# Démarrer le service
+# Start the service
 CMD ["node", "server.js"]
