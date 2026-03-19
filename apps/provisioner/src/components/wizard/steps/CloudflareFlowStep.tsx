@@ -62,6 +62,8 @@ interface CloudflareFlowStepProps {
   onHostnameChange: (hostname: string) => void;
   tunnelName: string;
   onTunnelNameChange: (name: string) => void;
+  hostnameConfirmed: boolean;
+  onConfirmHostname: () => void;
   
   // Pre-creation validation
   tunnelNameValidation: TunnelValidationResult | null;
@@ -471,6 +473,7 @@ interface HostnameSubStepProps {
   tunnelName: string;
   onTunnelNameChange: (name: string) => void;
   zoneName: string;
+  onConfirmHostname: () => void;
   // Validation
   tunnelNameValidation: TunnelValidationResult | null;
   hostnameValidation: DNSValidationResult | null;
@@ -488,6 +491,7 @@ function HostnameSubStep({
   tunnelName, 
   onTunnelNameChange, 
   zoneName,
+  onConfirmHostname,
   tunnelNameValidation,
   hostnameValidation,
   isValidatingTunnelName,
@@ -528,9 +532,17 @@ function HostnameSubStep({
     }
   }, [hostname, tunnelName, onTunnelNameChange]);
 
-  const isValidHostname = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(hostname.toLowerCase());
+  const isValidHostname = hostname.length >= 2 && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(hostname.toLowerCase());
   const tunnelExists = tunnelNameValidation?.status === 'exists';
   const hostnameExists = hostnameValidation?.status === 'exists';
+  
+  // Can confirm when: valid hostname, not validating, and either tunnel available or user chose to use existing
+  const canConfirm = isValidHostname && 
+    !isValidatingHostname && 
+    !isValidatingTunnelName &&
+    tunnelName.length >= 2 &&
+    (tunnelNameValidation?.status === 'available' || 
+     (tunnelExists && useExistingTunnel));
 
   return (
     <div className="animate-fade-in">
@@ -685,6 +697,27 @@ function HostnameSubStep({
             </div>
           )}
         </div>
+
+        {/* Confirm Button */}
+        <div className="pt-6 border-t border-surface-800">
+          <Button
+            onClick={onConfirmHostname}
+            disabled={!canConfirm}
+            className="w-full"
+            size="lg"
+          >
+            Confirm URL Configuration
+          </Button>
+          {!canConfirm && hostname.length >= 2 && (
+            <p className="text-xs text-surface-500 text-center mt-2">
+              {isValidatingHostname || isValidatingTunnelName 
+                ? 'Validating...' 
+                : tunnelExists && !useExistingTunnel 
+                  ? 'Choose to use existing tunnel or enter a different name'
+                  : 'Enter a valid hostname to continue'}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -805,6 +838,8 @@ export function CloudflareFlowStep({
   onHostnameChange,
   tunnelName,
   onTunnelNameChange,
+  hostnameConfirmed,
+  onConfirmHostname,
   tunnelNameValidation,
   hostnameValidation,
   isValidatingTunnelName,
@@ -819,13 +854,14 @@ export function CloudflareFlowStep({
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Determine current sub-step based on state
+  // IMPORTANT: hostname step requires explicit confirmation (hostnameConfirmed)
   const currentSubStep: FlowSubStep = useMemo(() => {
     if (!isTokenValidated) return 'connect';
     if (!selectedAccount) return 'account';
     if (!selectedZone) return 'zone';
-    if (!hostname || hostname.length < 2) return 'hostname';
+    if (!hostnameConfirmed) return 'hostname';
     return 'ready';
-  }, [isTokenValidated, selectedAccount, selectedZone, hostname]);
+  }, [isTokenValidated, selectedAccount, selectedZone, hostnameConfirmed]);
 
   // Track completed steps
   const completedSteps: FlowSubStep[] = useMemo(() => {
@@ -833,10 +869,10 @@ export function CloudflareFlowStep({
     if (isTokenValidated) completed.push('connect');
     if (selectedAccount) completed.push('account');
     if (selectedZone) completed.push('zone');
-    if (hostname && hostname.length >= 2) completed.push('hostname');
+    if (hostnameConfirmed) completed.push('hostname');
     if (completed.length === 4) completed.push('ready');
     return completed;
-  }, [isTokenValidated, selectedAccount, selectedZone, hostname]);
+  }, [isTokenValidated, selectedAccount, selectedZone, hostnameConfirmed]);
 
   const subSteps = [
     { id: 'connect' as FlowSubStep, label: 'Connect', icon: <KeyRound className="w-3 h-3" /> },
@@ -932,6 +968,7 @@ export function CloudflareFlowStep({
           tunnelName={tunnelName}
           onTunnelNameChange={onTunnelNameChange}
           zoneName={selectedZone.name}
+          onConfirmHostname={onConfirmHostname}
           tunnelNameValidation={tunnelNameValidation}
           hostnameValidation={hostnameValidation}
           isValidatingTunnelName={isValidatingTunnelName}

@@ -90,6 +90,7 @@ export function WizardPage() {
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('raspberry-pi');
   const [hostname, setHostname] = useState('');
   const [tunnelName, setTunnelName] = useState('');
+  const [hostnameConfirmed, setHostnameConfirmed] = useState(false);
   const [deviceName, setDeviceName] = useState('Office Printer Proxy');
   const [printerIp, setPrinterIp] = useState('');
   const [printerPort, setPrinterPort] = useState('9100');
@@ -152,6 +153,23 @@ export function WizardPage() {
   // Refresh zones from Cloudflare
   const handleRefreshZones = async () => {
     await loadZones(selectedAccount?.id);
+  };
+
+  // Handle hostname change - reset confirmation when hostname changes
+  const handleHostnameChange = (newHostname: string) => {
+    setHostname(newHostname);
+    setHostnameConfirmed(false); // Reset confirmation when user edits
+  };
+
+  // Handle tunnel name change - reset confirmation when tunnel name changes
+  const handleTunnelNameChange = (newTunnelName: string) => {
+    setTunnelName(newTunnelName);
+    setHostnameConfirmed(false); // Reset confirmation when user edits
+  };
+
+  // Confirm hostname configuration
+  const handleConfirmHostname = () => {
+    setHostnameConfirmed(true);
   };
 
   // Real provisioning with Cloudflare API
@@ -313,6 +331,7 @@ export function WizardPage() {
     setCurrentStep(0);
     setHostname('');
     setTunnelName('');
+    setHostnameConfirmed(false);
     setDeviceName('Office Printer Proxy');
     setProvisionTasks(defaultProvisionTasks);
     setDeviceId('');
@@ -350,9 +369,11 @@ export function WizardPage() {
             onRefreshZones={handleRefreshZones}
             isLoadingZones={isLoadingZones}
             hostname={hostname}
-            onHostnameChange={setHostname}
+            onHostnameChange={handleHostnameChange}
             tunnelName={tunnelName}
-            onTunnelNameChange={setTunnelName}
+            onTunnelNameChange={handleTunnelNameChange}
+            hostnameConfirmed={hostnameConfirmed}
+            onConfirmHostname={handleConfirmHostname}
             tunnelNameValidation={tunnelNameValidation}
             hostnameValidation={hostnameValidation}
             isValidatingTunnelName={isValidatingTunnelName}
