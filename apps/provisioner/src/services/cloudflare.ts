@@ -1,6 +1,7 @@
 /**
  * Cloudflare API Service
  * Real implementation for Cloudflare API interactions
+ * Uses Tauri HTTP client when available (bypasses CORS)
  * 
  * Required API Token Permissions:
  * - Account: Cloudflare Tunnel: Edit
@@ -18,6 +19,7 @@ import type {
   CloudflareApiError,
   CloudflareApiResponse,
 } from '../types';
+import { httpRequest, HttpError, isTauri } from './http-client';
 
 // ============================================
 // CONSTANTS
@@ -65,9 +67,34 @@ export class CloudflareApiException extends Error {
 }
 
 export class NetworkException extends Error {
-  constructor(message: string, public readonly originalError?: Error) {
+  public readonly category: string;
+  public readonly details?: string;
+
+  constructor(
+    message: string, 
+    category: 'network' | 'cors' | 'timeout' | 'connection' | 'unknown' = 'unknown',
+    details?: string
+  ) {
     super(message);
     this.name = 'NetworkException';
+    this.category = category;
+    this.details = details;
+  }
+
+  static fromHttpError(error: HttpError): NetworkException {
+    const messages: Record<string, string> = {
+      'network': 'No internet connection. Please check your network settings.',
+      'connection': 'Unable to reach Cloudflare API. The service may be temporarily unavailable.',
+      'timeout': 'Request timed out. Please try again.',
+      'cors': 'Request blocked by browser security. Please use the desktop application.',
+      'unknown': error.message,
+    };
+    
+    return new NetworkException(
+      messages[error.category] || error.message,
+      error.category as 'network' | 'cors' | 'timeout' | 'connection' | 'unknown',
+      error.details
+    );
   }
 }
 
@@ -101,42 +128,82 @@ export class CloudflareService implements ICloudflareService {
       throw new Error('API token is required');
     }
     this.apiToken = apiToken.trim();
+    
+    // Log which HTTP client will be used
+    console.log(`[CloudflareService] Using ${isTauri() ? 'Tauri native' : 'browser fetch'} HTTP client`);
   }
 
   /**
    * Make an authenticated request to the Cloudflare API
+   * Uses Tauri HTTP client when available (bypasses CORS)
    */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: { method?: string; body?: object } = {}
   ): Promise<T> {
     const url = `${CF_API_BASE}${endpoint}`;
+    const method = (options.method || 'GET') as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    
+    console.debug(`[CloudflareService] ${method} ${endpoint}`);
     
     try {
-      const response = await fetch(url, {
-        ...options,
+      const response = await httpRequest<CloudflareApiResponse<T>>(url, {
+        method,
         headers: {
           'Authorization': `Bearer ${this.apiToken}`,
           'Content-Type': 'application/json',
-          ...options.headers,
         },
+        body: options.body,
       });
 
-      const data: CloudflareApiResponse<T> = await response.json();
-
-      if (!data.success) {
-        throw CloudflareApiException.fromResponse(data.errors, response.status);
+      // Check for HTTP-level errors
+      if (!response.ok) {
+        const data = response.data;
+        if (data && typeof data === 'object' && 'errors' in data) {
+          throw CloudflareApiException.fromResponse(
+            (data as CloudflareApiResponse<T>).errors || [],
+            response.status
+          );
+        }
+        throw new CloudflareApiException(
+          `HTTP ${response.status}`,
+          response.status,
+          [],
+          response.status
+        );
       }
 
-      return data.result;
+      // Check Cloudflare API-level errors
+      const data = response.data;
+      if (data && typeof data === 'object' && 'success' in data && !data.success) {
+        throw CloudflareApiException.fromResponse(
+          (data as CloudflareApiResponse<T>).errors || [],
+          response.status
+        );
+      }
+
+      // Extract result from Cloudflare response wrapper
+      if (data && typeof data === 'object' && 'result' in data) {
+        return (data as CloudflareApiResponse<T>).result;
+      }
+      
+      return data as T;
     } catch (error) {
       if (error instanceof CloudflareApiException) {
+        console.error(`[CloudflareService] API error:`, error.message);
         throw error;
       }
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new NetworkException('Network error - check your internet connection', error);
+      if (error instanceof HttpError) {
+        console.error(`[CloudflareService] HTTP error [${error.category}]:`, error.message);
+        throw NetworkException.fromHttpError(error);
       }
-      throw new NetworkException(`Request failed: ${(error as Error).message}`, error as Error);
+      
+      console.error(`[CloudflareService] Unexpected error:`, error);
+      throw new NetworkException(
+        `Request failed: ${(error as Error).message}`,
+        'unknown',
+        (error as Error).message
+      );
     }
   }
 
@@ -203,11 +270,11 @@ export class CloudflareService implements ICloudflareService {
       `/accounts/${accountId}/cfd_tunnel`,
       {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           name,
           tunnel_secret: secret,
           config_src: 'cloudflare', // Remotely-managed tunnel
-        }),
+        },
       }
     );
 
@@ -276,7 +343,7 @@ export class CloudflareService implements ICloudflareService {
         `/zones/${zoneId}/dns_records/${existingRecords[0].id}`,
         {
           method: 'PUT',
-          body: JSON.stringify(recordData),
+          body: recordData,
         }
       );
     } else {
@@ -285,7 +352,7 @@ export class CloudflareService implements ICloudflareService {
         `/zones/${zoneId}/dns_records`,
         {
           method: 'POST',
-          body: JSON.stringify(recordData),
+          body: recordData,
         }
       );
     }
@@ -304,7 +371,7 @@ export class CloudflareService implements ICloudflareService {
       `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`,
       {
         method: 'PUT',
-        body: JSON.stringify({
+        body: {
           config: {
             ingress: [
               {
@@ -320,7 +387,7 @@ export class CloudflareService implements ICloudflareService {
               },
             ],
           },
-        }),
+        },
       }
     );
   }
@@ -445,7 +512,7 @@ export class MockCloudflareService implements ICloudflareService {
   }
 
   async createDNSRecord(
-    zoneId: string,
+    _zoneId: string,
     subdomain: string,
     tunnelId: string
   ): Promise<CloudflareDNSRecord> {
@@ -484,7 +551,9 @@ export function createCloudflareService(
   apiToken: string,
   forceMock = false
 ): ICloudflareService {
-  const useMock = forceMock || import.meta.env.VITE_USE_MOCK_CLOUDFLARE === 'true';
+  // Check for mock mode via environment variable or force flag
+  const useMock = forceMock || (typeof import.meta !== 'undefined' && 
+    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_USE_MOCK_CLOUDFLARE === 'true');
   
   if (useMock) {
     console.log('[CloudflareService] Using mock service');
