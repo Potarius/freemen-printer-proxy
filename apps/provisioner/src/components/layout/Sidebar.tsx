@@ -3,7 +3,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { Home, Zap, Settings, HelpCircle, Cpu, Monitor, ExternalLink } from 'lucide-react';
+import { Home, Zap, Settings, HelpCircle, Cpu, Monitor, ExternalLink, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/wizard', icon: Zap, label: 'Provision', description: 'New device' },
   { to: '/pi-setup', icon: Cpu, label: 'Pi Setup', description: 'Raspberry Pi' },
   { to: '/ubuntu-deploy', icon: Monitor, label: 'Deploy', description: 'Ubuntu/Linux' },
+  { to: '/diagnostics', icon: Activity, label: 'Diagnostics', description: 'System health' },
   { to: '/settings', icon: Settings, label: 'Settings', description: 'Preferences' },
 ];
 
