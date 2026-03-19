@@ -1,6 +1,6 @@
 /**
  * Pi Setup - Boot Files Step
- * Generate and download boot partition files
+ * Generate and download boot partition files OR write directly to SD card
  */
 
 import { useState } from 'react';
@@ -11,15 +11,18 @@ import {
   Check, 
   HardDrive,
   RefreshCw,
-  FolderOpen,
   ChevronDown,
   ChevronRight,
+  CircleDot,
+  Zap,
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
-import type { PiBootFile, PiSetupPackage } from '../../../types';
+import { SDWriteWizard } from '../../sd-write';
+import type { PiBootFile, PiSetupPackage, PiSetupConfig } from '../../../types';
 
 interface PiFilesStepProps {
   setupPackage: PiSetupPackage | null;
+  config?: PiSetupConfig;
   onGenerate: () => void;
   onDownloadFile: (file: PiBootFile) => void;
   onDownloadAll: () => void;
@@ -29,6 +32,7 @@ interface PiFilesStepProps {
 
 export function PiFilesStep({
   setupPackage,
+  config,
   onGenerate,
   onDownloadFile,
   onDownloadAll,
@@ -37,6 +41,8 @@ export function PiFilesStep({
 }: PiFilesStepProps) {
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
+  const [showSDWizard, setShowSDWizard] = useState(false);
+  const [sdWriteComplete, setSDWriteComplete] = useState(false);
 
   const copyFileContent = async (file: PiBootFile) => {
     try {
@@ -52,18 +58,35 @@ export function PiFilesStep({
     setExpandedFile(expandedFile === fileName ? null : fileName);
   };
 
+  const handleSDWriteComplete = () => {
+    setShowSDWizard(false);
+    setSDWriteComplete(true);
+  };
+
+  // Get config from setupPackage if not provided directly
+  const piConfig = config || setupPackage?.config;
+
   return (
     <div className="animate-fade-in max-w-3xl mx-auto">
+      {/* SD Write Wizard Modal */}
+      {showSDWizard && piConfig && (
+        <SDWriteWizard
+          config={piConfig}
+          onComplete={handleSDWriteComplete}
+          onCancel={() => setShowSDWizard(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="text-center mb-10">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mx-auto mb-4">
           <FileText className="w-8 h-8 text-green-400" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">
-          Boot Configuration Files
+          Configure SD Card
         </h2>
         <p className="text-surface-400">
-          Download and copy these files to your SD card's boot partition
+          Write configuration directly to your SD card or download files manually
         </p>
       </div>
 
@@ -80,13 +103,65 @@ export function PiFilesStep({
         </div>
       ) : (
         <>
-          {/* Instructions */}
-          <div className="p-4 rounded-xl bg-freemen-500/10 border border-freemen-500/20 mb-6">
-            <h3 className="font-medium text-freemen-400 mb-2">📋 Instructions</h3>
-            <ol className="text-sm text-surface-300 space-y-1 list-decimal list-inside">
+          {/* SD Write Success Message */}
+          {sdWriteComplete && (
+            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 mb-6">
+              <div className="flex items-center gap-3">
+                <Check className="w-6 h-6 text-green-400" />
+                <div>
+                  <h4 className="font-medium text-green-400">SD Card Configured!</h4>
+                  <p className="text-sm text-surface-300">
+                    Your SD card is ready. Click Continue to proceed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Primary Action: Write to SD Card */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/30 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/20 to-orange-500/20 flex items-center justify-center flex-shrink-0">
+                <CircleDot className="w-6 h-6 text-pink-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-white mb-1">
+                  Write Directly to SD Card
+                </h3>
+                <p className="text-sm text-surface-400 mb-4">
+                  Automatically configure your SD card with all necessary boot files.
+                  This is the recommended and fastest method.
+                </p>
+                <Button
+                  onClick={() => setShowSDWizard(true)}
+                  className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600"
+                  leftIcon={<Zap className="w-4 h-4" />}
+                >
+                  Write to SD Card
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-surface-700" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-4 bg-surface-950 text-sm text-surface-500">
+                or download files manually
+              </span>
+            </div>
+          </div>
+
+          {/* Manual Instructions */}
+          <div className="p-4 rounded-xl bg-surface-900/50 border border-surface-800 mb-6">
+            <h3 className="font-medium text-surface-300 mb-2">📋 Manual Method</h3>
+            <ol className="text-sm text-surface-400 space-y-1 list-decimal list-inside">
               <li>Insert your flashed SD card into this computer</li>
-              <li>Open the <strong>boot</strong> partition (usually labeled "boot" or "bootfs")</li>
-              <li>Download and copy the files below to the root of the boot partition</li>
+              <li>Open the <strong className="text-surface-300">boot</strong> partition</li>
+              <li>Download and copy the files below to the boot partition root</li>
               <li>Safely eject the SD card</li>
             </ol>
           </div>
@@ -95,8 +170,8 @@ export function PiFilesStep({
           <div className="flex justify-center mb-6">
             <Button 
               onClick={onDownloadAll} 
+              variant="secondary"
               leftIcon={<Download className="w-4 h-4" />}
-              size="lg"
             >
               Download All Files
             </Button>

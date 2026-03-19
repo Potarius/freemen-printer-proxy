@@ -96,6 +96,7 @@ export function PiSetupPage() {
         return (
           <PiFilesStep
             setupPackage={setupPackage}
+            config={config}
             onGenerate={generatePackage}
             onDownloadFile={downloadFile}
             onDownloadAll={downloadAllFiles}
