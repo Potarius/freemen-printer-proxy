@@ -88,8 +88,8 @@ export function WizardPage() {
   
   // Local form state
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>('raspberry-pi');
-  const [hostname, setHostname] = useState('printer');
-  const [tunnelName, setTunnelName] = useState('freemen-printer-proxy');
+  const [hostname, setHostname] = useState('');
+  const [tunnelName, setTunnelName] = useState('');
   const [deviceName, setDeviceName] = useState('Office Printer Proxy');
   const [printerIp, setPrinterIp] = useState('');
   const [printerPort, setPrinterPort] = useState('9100');
@@ -311,8 +311,8 @@ export function WizardPage() {
     resetCloudflare();
     clearPackage();
     setCurrentStep(0);
-    setHostname('printer');
-    setTunnelName('freemen-printer-proxy');
+    setHostname('');
+    setTunnelName('');
     setDeviceName('Office Printer Proxy');
     setProvisionTasks(defaultProvisionTasks);
     setDeviceId('');
