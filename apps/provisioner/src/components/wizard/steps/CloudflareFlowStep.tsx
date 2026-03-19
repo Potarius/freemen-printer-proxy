@@ -22,11 +22,13 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { clsx } from 'clsx';
 import type { CloudflareAccount, CloudflareZone } from '../../../types';
+import type { ValidationStatus, TunnelValidationResult, DNSValidationResult } from '../../../services/cloudflare';
 
 // ============================================
 // TYPES
@@ -60,6 +62,16 @@ interface CloudflareFlowStepProps {
   onHostnameChange: (hostname: string) => void;
   tunnelName: string;
   onTunnelNameChange: (name: string) => void;
+  
+  // Pre-creation validation
+  tunnelNameValidation: TunnelValidationResult | null;
+  hostnameValidation: DNSValidationResult | null;
+  isValidatingTunnelName: boolean;
+  isValidatingHostname: boolean;
+  onValidateTunnelName: (name: string) => Promise<TunnelValidationResult>;
+  onValidateHostname: (hostname: string) => Promise<DNSValidationResult>;
+  useExistingTunnel: boolean;
+  onSetUseExistingTunnel: (useExisting: boolean) => void;
   
   // Error
   error: { message: string; code?: number } | null;
@@ -406,6 +418,52 @@ function ZoneSubStep({ zones, selectedZone, onSelect, onRefresh, isLoading }: Zo
   );
 }
 
+// ============================================
+// VALIDATION STATUS BADGE
+// ============================================
+
+interface ValidationBadgeProps {
+  status: ValidationStatus | null;
+  isValidating: boolean;
+  message?: string;
+}
+
+function ValidationBadge({ status, isValidating, message }: ValidationBadgeProps) {
+  if (isValidating) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-surface-400">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Checking...</span>
+      </div>
+    );
+  }
+
+  if (!status || status === 'idle') {
+    return null;
+  }
+
+  const configs: Record<ValidationStatus, { icon: React.ReactNode; className: string; label: string }> = {
+    idle: { icon: null, className: '', label: '' },
+    checking: { icon: <Loader2 className="w-4 h-4 animate-spin" />, className: 'text-surface-400', label: 'Checking...' },
+    available: { icon: <CheckCircle className="w-4 h-4" />, className: 'text-green-400 bg-green-500/10 border-green-500/30', label: 'Available' },
+    exists: { icon: <AlertTriangle className="w-4 h-4" />, className: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30', label: 'Already exists' },
+    invalid: { icon: <AlertCircle className="w-4 h-4" />, className: 'text-red-400 bg-red-500/10 border-red-500/30', label: 'Invalid' },
+    error: { icon: <AlertCircle className="w-4 h-4" />, className: 'text-red-400 bg-red-500/10 border-red-500/30', label: 'Error' },
+  };
+
+  const config = configs[status];
+
+  return (
+    <div className={clsx(
+      'flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border',
+      config.className
+    )}>
+      {config.icon}
+      <span>{message || config.label}</span>
+    </div>
+  );
+}
+
 // Hostname Configuration Sub-Step
 interface HostnameSubStepProps {
   hostname: string;
@@ -413,6 +471,15 @@ interface HostnameSubStepProps {
   tunnelName: string;
   onTunnelNameChange: (name: string) => void;
   zoneName: string;
+  // Validation
+  tunnelNameValidation: TunnelValidationResult | null;
+  hostnameValidation: DNSValidationResult | null;
+  isValidatingTunnelName: boolean;
+  isValidatingHostname: boolean;
+  onValidateTunnelName: (name: string) => void;
+  onValidateHostname: (hostname: string) => void;
+  useExistingTunnel: boolean;
+  onSetUseExistingTunnel: (useExisting: boolean) => void;
 }
 
 function HostnameSubStep({ 
@@ -420,19 +487,50 @@ function HostnameSubStep({
   onHostnameChange, 
   tunnelName, 
   onTunnelNameChange, 
-  zoneName 
+  zoneName,
+  tunnelNameValidation,
+  hostnameValidation,
+  isValidatingTunnelName,
+  isValidatingHostname,
+  onValidateTunnelName,
+  onValidateHostname,
+  useExistingTunnel,
+  onSetUseExistingTunnel,
 }: HostnameSubStepProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const fullUrl = `https://${hostname}.${zoneName}`;
+  
+  // Debounce validation
+  useEffect(() => {
+    if (!hostname || hostname.length < 2) return;
+    
+    const timer = setTimeout(() => {
+      onValidateHostname(hostname);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [hostname, onValidateHostname]);
+
+  useEffect(() => {
+    if (!tunnelName || tunnelName.length < 2) return;
+    
+    const timer = setTimeout(() => {
+      onValidateTunnelName(tunnelName);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [tunnelName, onValidateTunnelName]);
   
   // Suggest tunnel name based on hostname
   useEffect(() => {
     if (hostname && !tunnelName) {
       onTunnelNameChange(`${hostname}-tunnel`);
     }
-  }, [hostname]);
+  }, [hostname, tunnelName, onTunnelNameChange]);
 
   const isValidHostname = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(hostname.toLowerCase());
+  const tunnelExists = tunnelNameValidation?.status === 'exists';
+  const hostnameExists = hostnameValidation?.status === 'exists';
 
   return (
     <div className="animate-fade-in">
@@ -464,6 +562,29 @@ function HostnameSubStep({
             />
             <span className="text-surface-500 text-lg">.{zoneName}</span>
           </div>
+          
+          {/* Hostname Validation Status */}
+          {hostname && hostname.length >= 2 && (
+            <div className="mt-2">
+              <ValidationBadge 
+                status={hostnameValidation?.status || null}
+                isValidating={isValidatingHostname}
+                message={hostnameValidation?.message}
+              />
+              
+              {/* Existing DNS warning */}
+              {hostnameExists && hostnameValidation?.pointsTo && (
+                <div className="mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <p className="text-sm text-yellow-300">
+                    This hostname already points to: <code className="text-yellow-400">{hostnameValidation.pointsTo}</code>
+                  </p>
+                  <p className="text-xs text-surface-400 mt-1">
+                    The existing record will be updated to point to your new tunnel.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Live URL Preview */}
@@ -477,7 +598,7 @@ function HostnameSubStep({
           </div>
         )}
 
-        {/* Advanced Settings */}
+        {/* Advanced Settings - Tunnel Name */}
         <div className="border-t border-surface-800 pt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -488,6 +609,11 @@ function HostnameSubStep({
               showAdvanced && 'rotate-180'
             )} />
             Advanced Settings
+            {tunnelExists && !showAdvanced && (
+              <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
+                Tunnel exists
+              </span>
+            )}
           </button>
           
           {showAdvanced && (
@@ -501,6 +627,57 @@ function HostnameSubStep({
                   onChange={(e) => onTunnelNameChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="freemen-printer-tunnel"
                 />
+                
+                {/* Tunnel Validation Status */}
+                {tunnelName && tunnelName.length >= 2 && (
+                  <div className="mt-2">
+                    <ValidationBadge 
+                      status={tunnelNameValidation?.status || null}
+                      isValidating={isValidatingTunnelName}
+                      message={tunnelNameValidation?.message}
+                    />
+                    
+                    {/* Existing tunnel options */}
+                    {tunnelExists && tunnelNameValidation?.existingTunnel && (
+                      <div className="mt-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                        <p className="text-sm text-yellow-300 mb-3">
+                          A tunnel named "{tunnelNameValidation.existingTunnel.name}" already exists.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-900/50 border border-surface-700 cursor-pointer hover:bg-surface-900 transition-colors">
+                            <input
+                              type="radio"
+                              name="tunnelOption"
+                              checked={useExistingTunnel}
+                              onChange={() => onSetUseExistingTunnel(true)}
+                              className="w-4 h-4 text-freemen-500"
+                            />
+                            <div>
+                              <span className="text-white font-medium">Use existing tunnel</span>
+                              <p className="text-xs text-surface-400">
+                                Reuse "{tunnelNameValidation.existingTunnel.name}" (recommended)
+                              </p>
+                            </div>
+                          </label>
+                          <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-900/50 border border-surface-700 cursor-pointer hover:bg-surface-900 transition-colors">
+                            <input
+                              type="radio"
+                              name="tunnelOption"
+                              checked={!useExistingTunnel}
+                              onChange={() => onSetUseExistingTunnel(false)}
+                              className="w-4 h-4 text-freemen-500"
+                            />
+                            <div>
+                              <span className="text-white font-medium">Choose different name</span>
+                              <p className="text-xs text-surface-400">Enter a new tunnel name above</p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <p className="text-xs text-surface-500 mt-1">
                   Internal name for the Cloudflare tunnel
                 </p>
@@ -628,6 +805,14 @@ export function CloudflareFlowStep({
   onHostnameChange,
   tunnelName,
   onTunnelNameChange,
+  tunnelNameValidation,
+  hostnameValidation,
+  isValidatingTunnelName,
+  isValidatingHostname,
+  onValidateTunnelName,
+  onValidateHostname,
+  useExistingTunnel,
+  onSetUseExistingTunnel,
   error,
   onClearError,
 }: CloudflareFlowStepProps) {
@@ -747,6 +932,14 @@ export function CloudflareFlowStep({
           tunnelName={tunnelName}
           onTunnelNameChange={onTunnelNameChange}
           zoneName={selectedZone.name}
+          tunnelNameValidation={tunnelNameValidation}
+          hostnameValidation={hostnameValidation}
+          isValidatingTunnelName={isValidatingTunnelName}
+          isValidatingHostname={isValidatingHostname}
+          onValidateTunnelName={onValidateTunnelName}
+          onValidateHostname={onValidateHostname}
+          useExistingTunnel={useExistingTunnel}
+          onSetUseExistingTunnel={onSetUseExistingTunnel}
         />
       )}
 

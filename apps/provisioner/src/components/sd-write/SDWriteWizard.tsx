@@ -22,7 +22,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
-import type { PiSetupConfig, DevicePackage } from '../../types';
+import type { PiSetupConfig } from '../../types';
 import {
   detectDrives,
   writeToSDCard,
@@ -40,7 +40,7 @@ import {
 
 interface SDWriteWizardProps {
   config: PiSetupConfig;
-  devicePackage?: DevicePackage;
+  tunnelToken?: string;
   onComplete: (result: SDWriteResult) => void;
   onCancel: () => void;
 }
@@ -53,7 +53,7 @@ type WizardStep = 'select' | 'confirm' | 'writing' | 'complete';
 
 export function SDWriteWizard({
   config,
-  devicePackage,
+  tunnelToken,
   onComplete,
   onCancel,
 }: SDWriteWizardProps) {
@@ -108,7 +108,7 @@ export function SDWriteWizard({
       const result = await writeToSDCard(
         bootPath,
         config,
-        devicePackage,
+        tunnelToken,
         (progress) => setWriteProgress(progress)
       );
 
@@ -200,7 +200,7 @@ export function SDWriteWizard({
             <ConfirmStep
               drive={selectedDrive}
               config={config}
-              devicePackage={devicePackage}
+              hasTunnelToken={!!tunnelToken}
             />
           )}
 
@@ -462,11 +462,11 @@ function DriveOption({
 function ConfirmStep({
   drive,
   config,
-  devicePackage,
+  hasTunnelToken,
 }: {
   drive: DetectedDrive;
   config: PiSetupConfig;
-  devicePackage?: DevicePackage;
+  hasTunnelToken?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -543,12 +543,12 @@ function ConfirmStep({
             </p>
           </div>
         </div>
-        {devicePackage && (
+        {hasTunnelToken && (
           <div className="mt-3 pt-3 border-t border-surface-700">
             <div className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-freemen-400" />
               <span className="text-sm text-freemen-400">
-                Freemen device package will be included
+                Cloudflare tunnel token will be included
               </span>
             </div>
           </div>

@@ -58,9 +58,19 @@ export function WizardPage() {
     createDNSRecord,
     configureTunnelIngress,
     getTunnelToken,
+    tunnel,
     error: cloudflareError,
     clearError,
     reset: resetCloudflare,
+    // Validation
+    tunnelNameValidation,
+    hostnameValidation,
+    isValidatingTunnelName,
+    isValidatingHostname,
+    validateTunnelName,
+    validateHostname,
+    useExistingTunnel,
+    setUseExistingTunnel,
   } = useCloudflareStore();
 
   // Package store
@@ -155,19 +165,33 @@ export function WizardPage() {
     const serviceUrl = 'http://localhost:6500'; // Default printer proxy port
 
     try {
-      // Task 1: Create Tunnel
+      // Task 1: Create Tunnel (or use existing)
       setCurrentTaskId('tunnel-create');
       tasks[0].status = 'running';
       setProvisionTasks([...tasks]);
 
-      const createdTunnel = await createTunnel(tunnelName);
-      if (!createdTunnel) {
-        throw new Error(cloudflareError?.message || 'Failed to create tunnel');
+      let createdTunnel = tunnel; // May already be set if using existing tunnel
+
+      if (useExistingTunnel && tunnel) {
+        // Use the existing tunnel that was already validated
+        tasks[0].status = 'success';
+        tasks[0].message = `Using existing tunnel "${tunnel.name}"`;
+        setProvisionTasks([...tasks]);
+      } else {
+        // Create a new tunnel
+        createdTunnel = await createTunnel(tunnelName);
+        if (!createdTunnel) {
+          throw new Error(cloudflareError?.message || 'Failed to create tunnel');
+        }
+
+        tasks[0].status = 'success';
+        tasks[0].message = `Tunnel "${tunnelName}" created`;
+        setProvisionTasks([...tasks]);
       }
 
-      tasks[0].status = 'success';
-      tasks[0].message = `Tunnel "${tunnelName}" created`;
-      setProvisionTasks([...tasks]);
+      if (!createdTunnel) {
+        throw new Error('No tunnel available');
+      }
 
       // Task 2: Configure Ingress
       setCurrentTaskId('tunnel-config');
@@ -329,6 +353,14 @@ export function WizardPage() {
             onHostnameChange={setHostname}
             tunnelName={tunnelName}
             onTunnelNameChange={setTunnelName}
+            tunnelNameValidation={tunnelNameValidation}
+            hostnameValidation={hostnameValidation}
+            isValidatingTunnelName={isValidatingTunnelName}
+            isValidatingHostname={isValidatingHostname}
+            onValidateTunnelName={validateTunnelName}
+            onValidateHostname={validateHostname}
+            useExistingTunnel={useExistingTunnel}
+            onSetUseExistingTunnel={setUseExistingTunnel}
             error={cloudflareError}
             onClearError={clearError}
           />

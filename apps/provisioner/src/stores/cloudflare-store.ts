@@ -18,6 +18,8 @@ import {
   NetworkException,
   isValidTokenFormat,
   type ICloudflareService,
+  type TunnelValidationResult,
+  type DNSValidationResult,
 } from '../services/cloudflare';
 
 // ============================================
@@ -50,6 +52,13 @@ export interface CloudflareState {
   tunnelToken: string | null;
   dnsRecord: CloudflareDNSRecord | null;
   
+  // Pre-creation validation
+  tunnelNameValidation: TunnelValidationResult | null;
+  hostnameValidation: DNSValidationResult | null;
+  isValidatingTunnelName: boolean;
+  isValidatingHostname: boolean;
+  useExistingTunnel: boolean;
+  
   // Loading states
   isValidatingToken: boolean;
   isLoadingAccounts: boolean;
@@ -74,6 +83,13 @@ export interface CloudflareState {
   getTunnelToken: () => Promise<string | null>;
   clearError: () => void;
   reset: () => void;
+  
+  // Validation actions
+  validateTunnelName: (name: string) => Promise<TunnelValidationResult>;
+  validateHostname: (hostname: string) => Promise<DNSValidationResult>;
+  setUseExistingTunnel: (useExisting: boolean) => void;
+  clearTunnelValidation: () => void;
+  clearHostnameValidation: () => void;
 }
 
 // ============================================
@@ -92,6 +108,11 @@ const initialState = {
   tunnel: null,
   tunnelToken: null,
   dnsRecord: null,
+  tunnelNameValidation: null,
+  hostnameValidation: null,
+  isValidatingTunnelName: false,
+  isValidatingHostname: false,
+  useExistingTunnel: false,
   isValidatingToken: false,
   isLoadingAccounts: false,
   isLoadingZones: false,
@@ -327,6 +348,105 @@ export const useCloudflareStore = create<CloudflareState>((set, get) => ({
   reset: () => {
     clearCloudflareService();
     set(initialState);
+  },
+
+  // ============================================
+  // VALIDATION ACTIONS
+  // ============================================
+
+  validateTunnelName: async (name: string): Promise<TunnelValidationResult> => {
+    const { service, selectedAccount } = get();
+    
+    if (!service || !selectedAccount) {
+      const result: TunnelValidationResult = {
+        status: 'error',
+        message: 'No account selected',
+      };
+      set({ tunnelNameValidation: result });
+      return result;
+    }
+
+    set({ isValidatingTunnelName: true, tunnelNameValidation: null });
+
+    try {
+      const result = await service.checkTunnelNameExists(selectedAccount.id, name);
+      set({
+        tunnelNameValidation: result,
+        isValidatingTunnelName: false,
+        // If tunnel exists, store it for potential reuse
+        tunnel: result.existingTunnel || get().tunnel,
+      });
+      return result;
+    } catch (error) {
+      const result: TunnelValidationResult = {
+        status: 'error',
+        message: `Validation failed: ${(error as Error).message}`,
+      };
+      set({
+        tunnelNameValidation: result,
+        isValidatingTunnelName: false,
+      });
+      return result;
+    }
+  },
+
+  validateHostname: async (hostname: string): Promise<DNSValidationResult> => {
+    const { service, selectedZone } = get();
+    
+    if (!service || !selectedZone) {
+      const result: DNSValidationResult = {
+        status: 'error',
+        message: 'No zone selected',
+      };
+      set({ hostnameValidation: result });
+      return result;
+    }
+
+    set({ isValidatingHostname: true, hostnameValidation: null });
+
+    try {
+      const result = await service.checkDNSRecordExists(selectedZone.id, hostname);
+      set({
+        hostnameValidation: result,
+        isValidatingHostname: false,
+      });
+      return result;
+    } catch (error) {
+      const result: DNSValidationResult = {
+        status: 'error',
+        message: `Validation failed: ${(error as Error).message}`,
+      };
+      set({
+        hostnameValidation: result,
+        isValidatingHostname: false,
+      });
+      return result;
+    }
+  },
+
+  setUseExistingTunnel: (useExisting: boolean) => {
+    const { tunnelNameValidation } = get();
+    set({ useExistingTunnel: useExisting });
+    
+    // If using existing tunnel, set it as the active tunnel
+    if (useExisting && tunnelNameValidation?.existingTunnel) {
+      set({ tunnel: tunnelNameValidation.existingTunnel });
+    }
+  },
+
+  clearTunnelValidation: () => {
+    set({
+      tunnelNameValidation: null,
+      isValidatingTunnelName: false,
+      useExistingTunnel: false,
+    });
+  },
+
+  clearHostnameValidation: () => {
+    set({
+      hostnameValidation: null,
+      isValidatingHostname: false,
+    });
   },
 }));
 

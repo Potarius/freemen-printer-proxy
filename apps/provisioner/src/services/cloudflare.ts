@@ -102,6 +102,29 @@ export class NetworkException extends Error {
 // SERVICE INTERFACE
 // ============================================
 
+// ============================================
+// VALIDATION TYPES
+// ============================================
+
+export type ValidationStatus = 'idle' | 'checking' | 'available' | 'exists' | 'invalid' | 'error';
+
+export interface TunnelValidationResult {
+  status: ValidationStatus;
+  message: string;
+  existingTunnel?: CloudflareTunnel;
+}
+
+export interface DNSValidationResult {
+  status: ValidationStatus;
+  message: string;
+  existingRecord?: CloudflareDNSRecord;
+  pointsTo?: string;
+}
+
+// ============================================
+// SERVICE INTERFACE
+// ============================================
+
 export interface ICloudflareService {
   verifyToken(): Promise<CloudflareTokenStatus>;
   getAccounts(): Promise<CloudflareAccount[]>;
@@ -114,6 +137,10 @@ export interface ICloudflareService {
   getDNSRecords(zoneId: string, name?: string): Promise<CloudflareDNSRecord[]>;
   configureTunnelIngress(accountId: string, tunnelId: string, hostname: string, serviceUrl: string): Promise<void>;
   deleteTunnel(accountId: string, tunnelId: string): Promise<void>;
+  
+  // Validation methods
+  checkTunnelNameExists(accountId: string, name: string): Promise<TunnelValidationResult>;
+  checkDNSRecordExists(zoneId: string, hostname: string): Promise<DNSValidationResult>;
 }
 
 // ============================================
@@ -401,6 +428,126 @@ export class CloudflareService implements ICloudflareService {
       { method: 'DELETE' }
     );
   }
+
+  /**
+   * Check if a tunnel with the given name already exists
+   */
+  async checkTunnelNameExists(accountId: string, name: string): Promise<TunnelValidationResult> {
+    // Validate name format first
+    if (!name || name.trim().length === 0) {
+      return {
+        status: 'invalid',
+        message: 'Tunnel name is required',
+      };
+    }
+
+    const trimmedName = name.trim().toLowerCase();
+    
+    // Basic format validation
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(trimmedName)) {
+      return {
+        status: 'invalid',
+        message: 'Tunnel name must start/end with alphanumeric and contain only letters, numbers, and hyphens',
+      };
+    }
+
+    if (trimmedName.length > 63) {
+      return {
+        status: 'invalid',
+        message: 'Tunnel name must be 63 characters or less',
+      };
+    }
+
+    try {
+      const tunnels = await this.getTunnels(accountId);
+      const existingTunnel = tunnels.find(
+        t => t.name.toLowerCase() === trimmedName
+      );
+
+      if (existingTunnel) {
+        return {
+          status: 'exists',
+          message: `Tunnel "${existingTunnel.name}" already exists`,
+          existingTunnel,
+        };
+      }
+
+      return {
+        status: 'available',
+        message: 'Tunnel name is available',
+      };
+    } catch (error) {
+      console.error('[CloudflareService] Error checking tunnel name:', error);
+      return {
+        status: 'error',
+        message: `Failed to check tunnel name: ${(error as Error).message}`,
+      };
+    }
+  }
+
+  /**
+   * Check if a DNS record with the given hostname already exists
+   */
+  async checkDNSRecordExists(zoneId: string, hostname: string): Promise<DNSValidationResult> {
+    // Validate hostname format
+    if (!hostname || hostname.trim().length === 0) {
+      return {
+        status: 'invalid',
+        message: 'Hostname is required',
+      };
+    }
+
+    const trimmedHostname = hostname.trim().toLowerCase();
+
+    // Basic hostname validation
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/.test(trimmedHostname)) {
+      return {
+        status: 'invalid',
+        message: 'Invalid hostname format',
+      };
+    }
+
+    try {
+      // Get zone info to construct full hostname if needed
+      const zones = await this.getZones();
+      const zone = zones.find(z => z.id === zoneId);
+      
+      if (!zone) {
+        return {
+          status: 'error',
+          message: 'Zone not found',
+        };
+      }
+
+      // Construct full hostname
+      const fullHostname = trimmedHostname.endsWith(zone.name) 
+        ? trimmedHostname 
+        : `${trimmedHostname}.${zone.name}`;
+
+      const records = await this.getDNSRecords(zoneId, fullHostname);
+
+      if (records.length > 0) {
+        const record = records[0];
+        return {
+          status: 'exists',
+          message: `Hostname "${fullHostname}" already has a DNS record`,
+          existingRecord: record,
+          pointsTo: record.content,
+        };
+      }
+
+      return {
+        status: 'available',
+        message: `Hostname "${fullHostname}" is available`,
+      };
+    } catch (error) {
+      console.error('[CloudflareService] Error checking DNS record:', error);
+      return {
+        status: 'error',
+        message: `Failed to check hostname: ${(error as Error).message}`,
+      };
+    }
+  }
 }
 
 // ============================================
@@ -533,6 +680,55 @@ export class MockCloudflareService implements ICloudflareService {
 
   async deleteTunnel(): Promise<void> {
     await this.delay();
+  }
+
+  async checkTunnelNameExists(accountId: string, name: string): Promise<TunnelValidationResult> {
+    await this.delay(500);
+    
+    if (!name || name.trim().length === 0) {
+      return { status: 'invalid', message: 'Tunnel name is required' };
+    }
+
+    const trimmedName = name.trim().toLowerCase();
+    
+    // Mock: 'existing-tunnel' already exists
+    if (trimmedName === 'existing-tunnel') {
+      const tunnels = await this.getTunnels(accountId);
+      return {
+        status: 'exists',
+        message: `Tunnel "${name}" already exists`,
+        existingTunnel: tunnels[0],
+      };
+    }
+
+    return {
+      status: 'available',
+      message: 'Tunnel name is available',
+    };
+  }
+
+  async checkDNSRecordExists(_zoneId: string, hostname: string): Promise<DNSValidationResult> {
+    await this.delay(500);
+    
+    if (!hostname || hostname.trim().length === 0) {
+      return { status: 'invalid', message: 'Hostname is required' };
+    }
+
+    const trimmedHostname = hostname.trim().toLowerCase();
+
+    // Mock: 'existing' subdomain already exists
+    if (trimmedHostname === 'existing' || trimmedHostname.startsWith('existing.')) {
+      return {
+        status: 'exists',
+        message: `Hostname "${hostname}" already has a DNS record`,
+        pointsTo: 'some-tunnel-id.cfargotunnel.com',
+      };
+    }
+
+    return {
+      status: 'available',
+      message: `Hostname is available`,
+    };
   }
 }
 

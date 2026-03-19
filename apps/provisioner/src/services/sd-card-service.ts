@@ -5,7 +5,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/tauri';
-import type { PiSetupConfig, PiBootFile, DevicePackage } from '../types';
+import type { PiSetupConfig, PiBootFile } from '../types';
 
 // ============================================
 // TYPES
@@ -294,11 +294,11 @@ network={
 /**
  * Generate firstrun.sh script for initial setup
  */
-export function generateFirstRunScript(config: PiSetupConfig, devicePackage?: DevicePackage): PiBootFile {
-  const tunnelSetup = devicePackage?.tunnelToken ? `
+export function generateFirstRunScript(config: PiSetupConfig, tunnelToken?: string): PiBootFile {
+  const tunnelSetup = tunnelToken ? `
 # Setup Cloudflare Tunnel
 mkdir -p /opt/freemen-printer-proxy
-echo '${devicePackage.tunnelToken}' > /opt/freemen-printer-proxy/tunnel-token.txt
+echo '${tunnelToken}' > /opt/freemen-printer-proxy/tunnel-token.txt
 chown -R ${config.username}:${config.username} /opt/freemen-printer-proxy
 ` : '';
 
@@ -386,7 +386,7 @@ export function generateCmdlineAddition(): string {
 export async function writeToSDCard(
   bootPath: string,
   config: PiSetupConfig,
-  devicePackage?: DevicePackage,
+  tunnelToken?: string,
   onProgress?: (progress: SDWriteProgress) => void
 ): Promise<SDWriteResult> {
   const result: SDWriteResult = {
@@ -443,7 +443,7 @@ export async function writeToSDCard(
 
     // Step 5: Generate firstrun script
     reportProgress('firstrun', 'Creating first boot script...');
-    files.push(generateFirstRunScript(config, devicePackage));
+    files.push(generateFirstRunScript(config, tunnelToken));
 
     // Step 6: Write all files
     reportProgress('write', 'Writing files to SD card...');
