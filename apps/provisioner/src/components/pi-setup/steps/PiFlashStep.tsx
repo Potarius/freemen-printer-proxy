@@ -228,25 +228,59 @@ set_status "UPDATING_SYSTEM"
 apt-get update -q && log "apt-get update done" || { set_status "ERROR_APT_UPDATE"; log "ERROR: apt-get update failed"; exit 1; }
 apt-get install -y -q curl ca-certificates && log "packages installed" || { set_status "ERROR_APT_INSTALL"; log "ERROR: apt install failed"; exit 1; }
 
-# 3. Docker (via official Docker apt repository — more reliable than get.docker.com)
+# 3. Docker
 set_status "INSTALLING_DOCKER"
 if ! command -v docker >/dev/null 2>&1; then
-    log "Installing Docker via apt repository..."
-    apt-get install -y -q ca-certificates curl gnupg && log "prereqs ok" || { set_status "ERROR_DOCKER_PREREQS"; log "ERROR: prereq install failed"; exit 1; }
+    log "Installing Docker..."
+
+    # Step 3a: Prerequisites
+    apt-get install -y -q ca-certificates curl gnupg \
+        && log "Docker prereqs ok" \
+        || { set_status "ERROR_DOCKER_PREREQS"; log "ERROR: prereq install failed"; exit 1; }
+
+    # Step 3b: GPG key
     install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-    ARCH=$(dpkg --print-architecture)
-    CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
-    echo "deb [arch=\${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \${CODENAME} stable" | \\
-        tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update -q
-    apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \\
-        && log "Docker CE installed" \\
-        || { set_status "ERROR_DOCKER_INSTALL"; log "ERROR: Docker install failed"; exit 1; }
+    curl -fsSL https://download.docker.com/linux/debian/gpg \
+        | gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>&1 \
+        && chmod a+r /etc/apt/keyrings/docker.gpg \
+        && log "Docker GPG key ok" \
+        || log "WARNING: Docker GPG key failed — will try docker.io fallback"
+
+    # Step 3c: Add apt repo and try Docker CE
+    ARCH=\$(dpkg --print-architecture)
+    CODENAME=\$(. /etc/os-release && echo "\${VERSION_CODENAME:-bookworm}")
+    log "Detected: arch=\$ARCH codename=\$CODENAME"
+
+    DOCKER_INSTALLED=0
+    if [ -f /etc/apt/keyrings/docker.gpg ]; then
+        echo "deb [arch=\${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \${CODENAME} stable" \
+            | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update -q 2>&1 | tail -5 | while read l; do log "apt: \$l"; done || true
+        if apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 2>&1; then
+            log "Docker CE installed"
+            DOCKER_INSTALLED=1
+        else
+            log "Docker CE install failed — trying docker.io fallback"
+        fi
+    fi
+
+    # Step 3d: Fallback to docker.io from Raspbian repos
+    if [ "\$DOCKER_INSTALLED" -eq 0 ]; then
+        apt-get install -y -q docker.io \
+            && log "docker.io installed (fallback)" \
+            || { set_status "ERROR_DOCKER_INSTALL"; log "ERROR: Both Docker CE and docker.io failed"; exit 1; }
+        # Install compose plugin for docker.io
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose 2>/dev/null \
+            && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose \
+            && log "docker-compose plugin installed" \
+            || log "WARNING: compose plugin install failed — docker compose may not work"
+    fi
+
     usermod -aG docker "${cfg.username}"
     systemctl enable docker
-    systemctl start docker
+    systemctl start docker && log "Docker started" || log "WARNING: Docker start failed"
 else
     log "Docker already present"
 fi
