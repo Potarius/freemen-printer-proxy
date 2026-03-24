@@ -85,7 +85,7 @@
       "endpoints": [
         "https://github.com/Potarius/freemen-printer-proxy/releases/latest/download/latest.json"
       ],
-      "pubkey": "REPLACE_WITH_YOUR_PUBLIC_KEY"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzM0UxNTE3NzdEMzVBM0YKUldRL1d0TjNGeFUrOHdhWk0rK01pK3RwWGNOcU9OL2YxVDg3YWp3Nkx1a1NQZzdmeWh5SnB0S2QK"
     },
     "windows": [
       {
