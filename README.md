@@ -2,7 +2,7 @@
 
 A self-hosted printer proxy that exposes a local network printer securely over the internet via Cloudflare Tunnel. Runs on a Raspberry Pi — fully headless, zero-touch provisioning, and automatically self-updating.
 
-Copyright (c) 2024 [Freemen Solutions Inc.](https://freemen.solutions)
+Copyright (c) 2024 [Freemen Solutions Inc.](https://freemensolutions.com)
 
 ---
 
@@ -120,4 +120,4 @@ Licensed under the [Polyform Noncommercial License 1.0.0](LICENSE).
 Free to use and modify for personal and non-commercial purposes.  
 Commercial use is not permitted without a separate agreement.
 
-For commercial licensing inquiries, contact [Freemen Solutions Inc.](https://freemen.solutions)
+For commercial licensing inquiries, contact [Freemen Solutions Inc.](https://freemensolutions.com)
