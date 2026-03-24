@@ -1,17 +1,17 @@
 [package]
 name = "freemen-provisioner"
-version = "1.0.0"
+version = "1.2.0"
 description = "Freemen Printer Proxy Provisioner"
-authors = ["Freemen Solutions"]
-license = "MIT"
-repository = "https://github.com/freemen-solutions/freemen-printer-proxy"
+authors = ["Freemen Solutions Inc."]
+license = "LicenseRef-Polyform-Noncommercial-1.0"
+repository = "https://github.com/Potarius/freemen-printer-proxy"
 edition = "2021"
 
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "http-all", "os-all", "clipboard-all", "dialog-all", "fs-all", "path-all", "shell-open", "window-all"] }
+tauri = { version = "1.5", features = [ "http-all", "os-all", "clipboard-all", "dialog-all", "fs-all", "path-all", "shell-open", "window-all", "updater"] }
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }

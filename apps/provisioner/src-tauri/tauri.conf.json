@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Freemen Provisioner",
-    "version": "1.0.0"
+    "version": "1.2.0"
   },
   "tauri": {
     "allowlist": {
@@ -80,7 +80,12 @@
       "csp": "default-src 'self'; connect-src 'self' https://api.cloudflare.com https://*.cloudflare.com https://downloads.raspberrypi.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
     },
     "updater": {
-      "active": false
+      "active": true,
+      "dialog": true,
+      "endpoints": [
+        "https://github.com/Potarius/freemen-printer-proxy/releases/latest/download/latest.json"
+      ],
+      "pubkey": "REPLACE_WITH_YOUR_PUBLIC_KEY"
     },
     "windows": [
       {

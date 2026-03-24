@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -10,6 +11,28 @@ import { PiSetupPage } from './pages/PiSetupPage';
 import { UbuntuDeployPage } from './pages/UbuntuDeployPage';
 
 function App() {
+  useEffect(() => {
+    // Check for updates on startup (Tauri only)
+    if ('__TAURI__' in window) {
+      import('@tauri-apps/api/updater').then(({ checkUpdate, installUpdate }) => {
+        import('@tauri-apps/api/dialog').then(({ ask }) => {
+          checkUpdate().then(({ shouldUpdate, manifest }) => {
+            if (shouldUpdate) {
+              ask(
+                `Version ${manifest?.version} is available.\n\n${manifest?.body ?? ''}\n\nInstall now?`,
+                { title: 'Update Available — Freemen Provisioner', type: 'info' }
+              ).then((yes) => {
+                if (yes) installUpdate().then(() => {
+                  import('@tauri-apps/api/process').then(({ relaunch }) => relaunch());
+                });
+              });
+            }
+          }).catch(() => { /* no update or offline — silent */ });
+        });
+      });
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <Routes>

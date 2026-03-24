@@ -30,6 +30,9 @@ export function Titlebar() {
       <div className="flex items-center gap-3" data-tauri-drag-region>
         <div className="w-5 h-5 rounded bg-gradient-to-br from-freemen-500 to-freemen-700" />
         <span className="text-sm font-medium text-surface-300">Freemen Provisioner</span>
+        <span className="text-xs text-surface-600">v1.2.0</span>
+        <span className="text-xs text-surface-700">·</span>
+        <span className="text-xs text-surface-600">by Freemen Solutions</span>
       </div>
 
       {/* Window controls */}
