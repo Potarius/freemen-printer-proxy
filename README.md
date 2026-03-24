@@ -1,258 +1,123 @@
 # Freemen Printer Proxy
 
-Local proxy service for Brother QL and TD label printers. Exposes your network printer via REST API for seamless cloud integration.
+A self-hosted printer proxy that exposes a local network printer securely over the internet via Cloudflare Tunnel. Runs on a Raspberry Pi — fully headless, zero-touch provisioning, and automatically self-updating.
 
-**Supported platforms:** Raspberry Pi (headless) • Ubuntu/Debian • Any Linux with Docker
-
----
-
-## Features
-
-- **Automatic Discovery** — Scan and detect Brother printers on your network
-- **Multi-Model Support** — Works with QL-710W, QL-800, QL-820NWB, TD-4550DNWB, and more
-- **Web Dashboard** — Configure and monitor from any browser
-- **Secure API** — Authentication via API key, rate limiting included
-- **Docker Ready** — Simple deployment on Raspberry Pi or server
-- **Print Statistics** — Track daily, monthly, and total print jobs
+Copyright (c) 2024 [Freemen Solutions Inc.](https://freemen.solutions)
 
 ---
 
-## Quick Start
+## How it works
 
-### Automated Installation (Recommended)
+Your ERP or cloud application sends print jobs to a public HTTPS endpoint. The Freemen Printer Proxy receives those jobs through a Cloudflare Tunnel and forwards them to a local printer on the LAN — no port forwarding, no VPN, no static IP required.
 
-```bash
-git clone https://github.com/freemen-solutions/freemen-printer-proxy.git
-cd freemen-printer-proxy
+\
+---
 
-# For standard Linux
-./scripts/install.sh
+## Requirements
 
-# For Raspberry Pi
-./scripts/install-pi.sh
-```
-
-The script handles Docker installation, configuration, and startup automatically.
-
-### Manual Installation
-
-```bash
-git clone https://github.com/freemen-solutions/freemen-printer-proxy.git
-cd freemen-printer-proxy
-
-# Configure
-cp .env.example .env
-nano .env  # Set your API_KEY
-
-# Start with Docker
-docker compose up -d
-```
-
-**Dashboard:** http://localhost:6500
+- Raspberry Pi 3 / 4 / 5 (64-bit OS, with network access)
+- SD card — 8 GB minimum, 16 GB recommended
+- A Cloudflare account with a domain
+- The **Freemen Provisioner** desktop app (Windows)
 
 ---
 
-## Supported Platforms
+## Provisioning a device
 
-| Platform | Architecture | Notes |
-|----------|--------------|-------|
-| Raspberry Pi 4/5 | ARM64 | Recommended for dedicated print server |
-| Raspberry Pi 3B+ | ARM64 | Use 64-bit OS |
-| Ubuntu/Debian | AMD64 | Server or desktop |
-| Any Linux | AMD64/ARM64 | With Docker support |
+1. Download and run the **Freemen Provisioner** app.
+2. Follow the wizard:
+   - Connect your Cloudflare account with an API token
+   - Choose a tunnel name and public hostname (e.g. )
+   - Set Pi username, password, and optional WiFi credentials
+   - Save your generated API key — it will be embedded in the device
+   - Download the Raspberry Pi OS image and flash it to your SD card
+3. Insert the SD card into the Pi and power it on.
+4. Wait approximately 10 minutes for automated setup to finish.
+5. Your printer proxy is live at .
 
----
+### What happens on first boot
 
-## Compatible Printers
+**Boot 1** — offline setup (~30 seconds):
+- Hostname configured, SSH enabled
+- Install service registered to run after network is available
+- Pi reboots automatically
 
-### QL Series (Label Printers)
-- QL-710W, QL-720NW
-- QL-800, QL-810W, QL-820NWB
-- QL-1100, QL-1110NWB
-
-### TD Series (Desktop Thermal)
-- TD-4410D, TD-4420DN
-- TD-4520DN, TD-4550DNWB
-
----
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `6500` | HTTP server port |
-| `API_KEY` | *(required)* | Authentication key |
-| `PRINTER_IP` | *(empty)* | Pre-configured printer IP |
-| `PRINTER_PORT` | `9100` | Printer port |
-| `PRINTER_PROTOCOL` | `jetdirect` | Protocol: `jetdirect` or `ipp` |
-
-### Dashboard Configuration
-
-1. Open http://YOUR_IP:6500
-2. Enter your API key
-3. Go to **Configuration** tab
-4. Click **Quick Scan** to find printers
-5. Select your printer
+**Boot 2** — network installation (~5–10 minutes):
+- Docker CE installed via official apt repository
+- cloudflared downloaded and tunnel service started
+- freemen-printer-proxy container pulled from GHCR and started
+- watchtower container started for automatic future updates
 
 ---
 
-## API Usage
+## Sending print jobs
 
-All endpoints except `/health` require the `X-API-Key` header.
-
-### Print a QR Code
-
-```bash
-curl -X POST http://localhost:6500/print/qr \
-  -H "X-API-Key: your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": "https://example.com/item/12345",
-    "labelSize": "medium",
-    "productName": "My Product",
-    "productNumber": "12345"
-  }'
-```
-
-### Available Endpoints
-
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/health` | GET | No | Health check |
-| `/status` | GET | Yes | Detailed status |
-| `/config` | GET | Yes | Current configuration |
-| `/config/printer` | POST | Yes | Set active printer |
-| `/discover/quick` | GET | Yes | Quick network scan |
-| `/discover` | GET | Yes | Full network scan |
-| `/print/test` | POST | Yes | Test print |
-| `/print/qr` | POST | Yes | Print QR code label |
-| `/print/raw` | POST | Yes | Print raw data |
+\
+All endpoints except  require the  header.
 
 ---
 
-## Documentation
+## API reference
 
-- **[Install on Raspberry Pi](docs/INSTALL_RASPBERRY_PI.md)** — Complete Pi setup guide
-- **[Install on Linux](docs/INSTALL_LINUX.md)** — Server/desktop installation
-- **[Cloudflare Tunnel](docs/CLOUDFLARE_TUNNEL.md)** — Secure remote access setup
-- **[Architecture](docs/ARCHITECTURE.md)** — Technical overview
-- **[Update Guide](docs/UPDATE.md)** — How to update
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions
-
----
-
-## Project Structure
-
-```
-freemen-printer-proxy/
-├── server.js              # Express application
-├── docker-compose.yml     # Docker configuration
-├── Dockerfile             # Docker image
-├── .env.example           # Environment template
-├── lib/                   # Core modules
-├── middleware/            # Express middleware
-├── public/                # Web dashboard
-├── scripts/               # Installation & update scripts
-├── tools/provisioner/     # Cloudflare provisioning tool
-├── docs/                  # Documentation
-├── data/                  # Persistent config (gitignored)
-└── logs/                  # Application logs (gitignored)
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+|  | GET | Health check (no auth) |
+|  | GET | Service and printer status |
+|  | GET | Current configuration |
+|  | POST | Set active printer IP |
+|  | GET | Scan network for printers |
+|  | POST | Print a test page |
+|  | POST | Send raw print data |
+|  | POST | Print a QR code label |
 
 ---
 
-## Remote Access (Cloudflare Tunnel)
+## Automatic updates
 
-Securely expose your printer proxy to the internet without port forwarding.
+The Pi runs [Watchtower](https://containrrr.dev/watchtower/), which checks  every hour. Push a new image and all deployed devices update themselves automatically.
 
-### Windows Provisioner
-
-```powershell
-cd tools\provisioner
-.\provision.bat
-```
-
-### Mac/Linux
-
-```bash
-cd tools/provisioner
-npm install
-node index.js
-```
-
-The interactive provisioner will:
-1. Connect to your Cloudflare account
-2. Create a tunnel and DNS record
-3. Generate deployment files for your device
-
-See **[Cloudflare Tunnel Guide](docs/CLOUDFLARE_TUNNEL.md)** for details.
+**To deploy an update:**
+1. Build and push a new image to 2. All Pis will pull and restart the new image within the hour
 
 ---
 
-## Administration
+## Debugging a Pi that won't come online
 
-### Interactive Admin Menu
+Pull the SD card, insert it into a Windows PC, and open the FAT32 boot partition. You will find:
 
-For interactive server management:
+-  — full timestamped log of the setup process
+-  — last reached status (e.g.  or )
 
-```bash
-./deploy-menu.sh
-```
-
-This provides a menu-driven interface for:
-- Full deployment (pull + build + restart)
-- Quick restart
-- Build/Start/Stop operations
-- View logs and status
-- Run updates and diagnostics
-
-### Admin Dashboard
-
-The web dashboard includes an **Admin** tab with:
-- System information (version, uptime, memory)
-- Quick actions (check updates, view logs)
-- SSH command reference
-
-### Useful Commands
-
-```bash
-# Interactive admin menu
-./deploy-menu.sh
-
-# Non-interactive update
-./scripts/update.sh
-
-# Diagnostics
-./scripts/doctor.sh
-
-# View logs
-docker compose logs -f
-
-# Restart
-docker compose restart
-
-# Stop
-docker compose down
-```
+| Status | Meaning |
+|--------|---------|
+|  | Stage 1 done, waiting for stage 2 on next boot |
+|  | Stage 2 running — network install in progress |
+|  | No internet on second boot — check cable or WiFi credentials |
+|  | Docker install failed |
+|  | Cloudflare tunnel token rejected — re-provision with a new token |
+|  | Could not pull image from GHCR |
+|  | Setup finished successfully |
 
 ---
 
-## Security Notes
+## Project structure
 
-- **Change the default API key** — Generate a secure key for production
-- **Local network only** — The service is designed for local access
-- **Use a tunnel for remote access** — Cloudflare Tunnel, Tailscale, or similar
+\
+---
 
+## Running without a Pi
+
+To run the proxy directly on any Linux machine with Docker:
+
+\
 ---
 
 ## License
 
-MIT
+Copyright (c) 2024 Freemen Solutions Inc.
 
----
+Licensed under the [Polyform Noncommercial License 1.0.0](LICENSE).  
+Free to use and modify for personal and non-commercial purposes.  
+Commercial use is not permitted without a separate agreement.
 
-## Author
-
-[Freemen Solutions](https://freemen.solutions)
+For commercial licensing inquiries, contact [Freemen Solutions Inc.](https://freemen.solutions)
