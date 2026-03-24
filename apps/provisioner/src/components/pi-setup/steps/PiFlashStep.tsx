@@ -223,6 +223,21 @@ if [ "\$NETWORK_UP" -eq 0 ]; then
     exit 1
 fi
 
+# 1b. Sync system clock — Raspberry Pi has no hardware RTC so it boots with a
+#     stale date. Repository GPG signatures will fail if the clock is in the past.
+set_status "SYNCING_CLOCK"
+log "Syncing system clock via NTP (Pi has no hardware RTC)..."
+timedatectl set-ntp true 2>/dev/null || true
+systemctl start systemd-timesyncd 2>/dev/null || true
+for i in \$(seq 1 20); do
+    sleep 3
+    if timedatectl show --property=NTPSynchronized --value 2>/dev/null | grep -q "yes"; then
+        log "Clock synced: \$(date)"
+        break
+    fi
+done
+log "Clock after sync attempt: \$(date)"
+
 # 2. System updates
 set_status "UPDATING_SYSTEM"
 apt-get update -q && log "apt-get update done" || { set_status "ERROR_APT_UPDATE"; log "ERROR: apt-get update failed"; exit 1; }
@@ -249,11 +264,16 @@ if ! command -v docker >/dev/null 2>&1; then
     # Step 3c: Add apt repo and try Docker CE
     ARCH=\$(dpkg --print-architecture)
     CODENAME=\$(. /etc/os-release && echo "\${VERSION_CODENAME:-bookworm}")
-    log "Detected: arch=\$ARCH codename=\$CODENAME"
+    # Docker CE only publishes stable repos up to bookworm; fall back if newer
+    case "\$CODENAME" in
+        bookworm|bullseye|buster) DOCKER_CODENAME="\$CODENAME" ;;
+        *) DOCKER_CODENAME="bookworm" ;;
+    esac
+    log "Detected: arch=\$ARCH codename=\$CODENAME (Docker repo: \$DOCKER_CODENAME)"
 
     DOCKER_INSTALLED=0
     if [ -f /etc/apt/keyrings/docker.gpg ]; then
-        echo "deb [arch=\${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \${CODENAME} stable" \
+        echo "deb [arch=\${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \${DOCKER_CODENAME} stable" \
             | tee /etc/apt/sources.list.d/docker.list > /dev/null
         apt-get update -q 2>&1 | tail -5 | while read l; do log "apt: \$l"; done || true
         if apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 2>&1; then
