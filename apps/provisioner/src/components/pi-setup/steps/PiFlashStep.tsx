@@ -281,6 +281,13 @@ services:
     environment:
       - NODE_ENV=production
       - API_KEY=${cfg.apiKey || 'change-me'}
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 3600 --cleanup printer-proxy
 COMPOSE_EOF
 
 cd /opt/freemen-printer-proxy
