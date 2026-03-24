@@ -636,9 +636,10 @@ app.post('/test-printer', authenticate, async (req, res) => {
 // Scan rapide du réseau (IPs communes seulement)
 app.get('/discover/quick', authenticate, async (req, res) => {
   try {
-    logger.info('Scan rapide du réseau');
-    
-    const results = await discovery.quickScan({ timeout: 1500 });
+    const subnet = req.query.subnet ? req.query.subnet.trim() : null;
+    logger.info('Scan rapide du réseau', { subnet: subnet || 'auto' });
+
+    const results = await discovery.quickScan({ timeout: 1500, subnet });
     
     // Enregistrer les résultats
     configManager.recordScanResults(results);
@@ -668,14 +669,16 @@ app.get('/discover', authenticate, async (req, res) => {
       });
     }
     
+    const subnet = req.query.subnet ? req.query.subnet.trim() : null;
     const scanId = `scan_${Date.now()}`;
     activeScan = { id: scanId, startedAt: Date.now(), progress: 0 };
-    
-    logger.info('Scan complet du réseau démarré', { scanId });
-    
+
+    logger.info('Scan complet du réseau démarré', { scanId, subnet: subnet || 'auto' });
+
     const results = await discovery.scanNetwork({
       timeout: 800,
       concurrency: 30,
+      subnet,
       progressCallback: (progress) => {
         if (activeScan) {
           activeScan.progress = Math.round((progress.completed / progress.total) * 100);
