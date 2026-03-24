@@ -331,7 +331,7 @@ services:
     image: ghcr.io/potarius/freemen-printer-proxy:latest
     restart: unless-stopped
     ports:
-      - "${cfg.printerPort}:6500"
+      - "6500:6500"
     environment:
       - NODE_ENV=production
       - API_KEY=${cfg.apiKey || 'change-me'}
