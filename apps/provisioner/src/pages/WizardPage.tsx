@@ -576,7 +576,15 @@ export function WizardPage() {
           <h1 className="text-lg font-semibold text-white">
             {steps[currentStep]?.title}
           </h1>
-          {!isProvisioningOrComplete && (
+          {currentStepId === 'success' ? (
+            <button
+              onClick={async () => { const { appWindow } = await import('@tauri-apps/api/window'); appWindow.close(); }}
+              className="p-2 text-surface-400 hover:text-white hover:bg-red-600 rounded-lg transition-colors"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          ) : !isProvisioningOrComplete && (
             <button
               onClick={handleCancel}
               className="p-2 text-surface-400 hover:text-white hover:bg-surface-800 rounded-lg transition-colors"

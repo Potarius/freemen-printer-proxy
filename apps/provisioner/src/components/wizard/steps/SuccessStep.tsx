@@ -1,14 +1,13 @@
 /**
- * Step 9: Success / Final
- * Displays provisioning success with package preview
+ * Step: Success / Final
+ * Shown after all provisioning and SD card flashing is complete.
  */
 
 import { useState } from 'react';
-import { CheckCircle, Download, ExternalLink, Copy, Terminal, FolderOpen, ChevronDown, ChevronUp, HardDrive, Zap, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Download, ExternalLink, Copy, Terminal, FolderOpen, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { PackagePreview } from '../PackagePreview';
-import { SDWriteWizard } from '../../sd-write';
-import type { DevicePackage, DevicePackageFile, PiSetupConfig, TargetPlatform } from '../../../types';
+import type { DevicePackage, DevicePackageFile, TargetPlatform } from '../../../types';
 
 interface SuccessStepProps {
   targetPlatform: TargetPlatform;
@@ -30,7 +29,6 @@ export function SuccessStep({
   targetPlatform,
   hostname,
   tunnelName,
-  tunnelToken,
   proxyApiKey,
   deviceId,
   devicePackage,
@@ -43,27 +41,8 @@ export function SuccessStep({
 }: SuccessStepProps) {
   const [showPackagePreview, setShowPackagePreview] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
-  const [showSDWizard, setShowSDWizard] = useState(false);
-  const [sdWriteComplete, setSDWriteComplete] = useState(false);
-  const [piConfig, setPiConfig] = useState<PiSetupConfig>(() => {
-    const hostnamePrefix = hostname.split('.')[0] || 'freemen-pi';
-    return {
-      hostname: hostnamePrefix.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 63) || 'freemen-pi',
-      username: 'freemen',
-      password: `freemen-${Math.random().toString(36).slice(2, 10)}`,
-      wifiSsid: '',
-      wifiPassword: '',
-      wifiCountry: 'US',
-      enableSsh: true,
-      timezone: 'America/New_York',
-      locale: 'en_US.UTF-8',
-      keyboardLayout: 'us',
-    };
-  });
 
   const isRaspberryPi = targetPlatform === 'raspberry-pi';
-  const canPrepareSd = piConfig.hostname.length >= 2 && piConfig.username.length >= 2 && piConfig.password.length >= 8;
-  const shouldGatePiFinish = isRaspberryPi && !sdWriteComplete;
 
   const copyToClipboard = async (text: string, label?: string) => {
     try {
@@ -75,33 +54,21 @@ export function SuccessStep({
     }
   };
 
-  const handleSDWriteComplete = () => {
-    setShowSDWizard(false);
-    setSDWriteComplete(true);
-  };
-
   return (
     <div className="animate-fade-in max-w-2xl mx-auto">
-      {showSDWizard && isRaspberryPi && (
-        <SDWriteWizard
-          config={piConfig}
-          tunnelToken={tunnelToken}
-          onComplete={handleSDWriteComplete}
-          onCancel={() => setShowSDWizard(false)}
-        />
-      )}
-
       {/* Success header */}
       <div className="text-center mb-10">
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center mx-auto mb-6 relative">
           <CheckCircle className="w-12 h-12 text-green-400" />
           <div className="absolute inset-0 rounded-full border-4 border-green-500/30 animate-ping opacity-25" />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-3">Provisioning Complete!</h2>
+        <h2 className="text-3xl font-bold text-white mb-3">
+          {isRaspberryPi ? 'SD Card Ready!' : 'Provisioning Complete!'}
+        </h2>
         <p className="text-surface-400">
           {isRaspberryPi
-            ? (sdWriteComplete ? 'Your SD card is ready to boot' : 'Cloudflare provisioning is complete, now prepare your SD card')
-            : 'Your device configuration is ready to deploy'}
+            ? 'Your SD card is flashed and configured. Insert it into the Pi and power on.'
+            : 'Your device configuration is ready to deploy.'}
         </p>
       </div>
 
@@ -110,163 +77,73 @@ export function SuccessStep({
         <InfoCard label="Public URL" value={`https://${hostname}`} copiable onCopy={() => copyToClipboard(`https://${hostname}`)} />
         <InfoCard label="Tunnel Name" value={tunnelName} />
         <InfoCard label="Device ID" value={deviceId} copiable onCopy={() => copyToClipboard(deviceId)} />
-        <InfoCard
-          label="Status"
-          value={isRaspberryPi ? (sdWriteComplete ? 'SD Card Ready' : 'SD Preparation Required') : 'Ready to deploy'}
-          success={!isRaspberryPi || sdWriteComplete}
-        />
+        <InfoCard label="Status" value="Ready" success />
       </div>
 
-      {/* Output path indicator */}
+      {/* Output path */}
       {outputPath && (
         <div className="p-3 rounded-lg bg-surface-900/50 border border-surface-800 mb-6">
           <div className="flex items-center gap-2 text-sm">
             <FolderOpen className="w-4 h-4 text-surface-400" />
-            <span className="text-surface-400">Output:</span>
+            <span className="text-surface-400">Package saved to:</span>
             <code className="text-freemen-400 font-mono text-xs truncate flex-1">{outputPath}</code>
-            <button
-              onClick={() => copyToClipboard(outputPath, 'path')}
-              className="p-1 hover:bg-surface-700 rounded transition-colors"
-            >
-              {copiedText === 'path' ? (
-                <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-surface-400" />
-              )}
+            <button onClick={() => copyToClipboard(outputPath, 'path')} className="p-1 hover:bg-surface-700 rounded transition-colors">
+              {copiedText === 'path'
+                ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                : <Copy className="w-3.5 h-3.5 text-surface-400" />}
             </button>
           </div>
         </div>
       )}
 
-      {/* API Key — must be copied now */}
+      {/* API Key reminder */}
       {proxyApiKey && (
         <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/40 mb-8">
           <div className="flex items-start gap-3 mb-4">
             <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-yellow-300 mb-1">Save your API Key now</h3>
+              <h3 className="font-semibold text-yellow-300 mb-1">API Key — save this</h3>
               <p className="text-sm text-yellow-200/70">
-                This key authenticates requests to your printer proxy. It is embedded in the device config and will not be shown again. Store it in your cloud server or ERP as the <code className="bg-yellow-500/20 px-1 rounded text-yellow-300">x-api-key</code> header value.
+                Already embedded in your device. Store it in your ERP or cloud server as the{' '}
+                <code className="bg-yellow-500/20 px-1 rounded text-yellow-300">x-api-key</code> header value.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 p-3 rounded-lg bg-surface-950 border border-yellow-500/30">
-            <code className="flex-1 font-mono text-sm text-yellow-300 break-all select-all">
-              {proxyApiKey}
-            </code>
+            <code className="flex-1 font-mono text-sm text-yellow-300 break-all select-all">{proxyApiKey}</code>
             <button
               onClick={() => copyToClipboard(proxyApiKey, 'apiKey')}
               className="flex-shrink-0 p-2 hover:bg-surface-800 rounded-lg transition-colors"
               title="Copy API key"
             >
-              {copiedText === 'apiKey' ? (
-                <CheckCircle className="w-4 h-4 text-green-400" />
-              ) : (
-                <Copy className="w-4 h-4 text-yellow-400" />
-              )}
+              {copiedText === 'apiKey'
+                ? <CheckCircle className="w-4 h-4 text-green-400" />
+                : <Copy className="w-4 h-4 text-yellow-400" />}
             </button>
           </div>
-          {copiedText === 'apiKey' && (
-            <p className="text-xs text-green-400 mt-2 text-right">Copied to clipboard</p>
-          )}
         </div>
       )}
 
-      {/* Actions */}
-      {isRaspberryPi ? (
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/30 mb-8">
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/20 to-orange-500/20 flex items-center justify-center flex-shrink-0">
-              <HardDrive className="w-6 h-6 text-pink-400" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-1">Prepare SD Card</h3>
-              <p className="text-sm text-surface-300">
-                Finish the Raspberry Pi flow by writing headless boot files directly to the SD card.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <label className="text-sm text-surface-300">
-              Pi hostname
-              <input
-                value={piConfig.hostname}
-                onChange={(e) => setPiConfig((prev) => ({ ...prev, hostname: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 63) }))}
-                className="mt-1 w-full rounded-lg bg-surface-900 border border-surface-700 px-3 py-2 text-white"
-                placeholder="freemen-pi"
-              />
-            </label>
-            <label className="text-sm text-surface-300">
-              Username
-              <input
-                value={piConfig.username}
-                onChange={(e) => setPiConfig((prev) => ({ ...prev, username: e.target.value }))}
-                className="mt-1 w-full rounded-lg bg-surface-900 border border-surface-700 px-3 py-2 text-white"
-                placeholder="freemen"
-              />
-            </label>
-            <label className="text-sm text-surface-300 md:col-span-2">
-              Password
-              <input
-                value={piConfig.password}
-                onChange={(e) => setPiConfig((prev) => ({ ...prev, password: e.target.value }))}
-                className="mt-1 w-full rounded-lg bg-surface-900 border border-surface-700 px-3 py-2 text-white"
-                placeholder="Minimum 8 characters"
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={() => setShowSDWizard(true)}
-              disabled={!canPrepareSd}
-              className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600"
-              leftIcon={<Zap className="w-4 h-4" />}
-            >
-              {sdWriteComplete ? 'Re-run SD Card Preparation' : 'Prepare SD Card'}
+      {/* Package actions */}
+      <div className="p-6 rounded-2xl bg-surface-900/50 border border-surface-800 mb-8">
+        <h3 className="font-semibold text-white mb-4">Device Package</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={onDownload} leftIcon={<Download className="w-4 h-4" />}>
+            Download Package
+          </Button>
+          <Button variant="secondary" onClick={onOpenFolder} leftIcon={<FolderOpen className="w-4 h-4" />}>
+            Open Folder
+          </Button>
+          {onCopySteps && (
+            <Button variant="ghost" onClick={onCopySteps} leftIcon={<Copy className="w-4 h-4" />}>
+              Copy Deploy Steps
             </Button>
-            {sdWriteComplete && (
-              <>
-                <Button variant="secondary" onClick={onOpenFolder} leftIcon={<FolderOpen className="w-4 h-4" />}>
-                  Open Package Folder
-                </Button>
-                <Button variant="ghost" onClick={onDownload} leftIcon={<Download className="w-4 h-4" />}>
-                  Download Package Backup
-                </Button>
-              </>
-            )}
-          </div>
-
-          {shouldGatePiFinish && (
-            <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-              <p className="text-sm text-yellow-300">
-                Complete SD card preparation first. Backup package actions unlock after a successful SD write.
-              </p>
-            </div>
           )}
         </div>
-      ) : (
-        <div className="p-6 rounded-2xl bg-surface-900/50 border border-surface-800 mb-8">
-          <h3 className="font-semibold text-white mb-4">Download Configuration</h3>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={onDownload} leftIcon={<Download className="w-4 h-4" />}>
-              Download Package
-            </Button>
-            <Button variant="secondary" onClick={onOpenFolder} leftIcon={<FolderOpen className="w-4 h-4" />}>
-              Open Folder
-            </Button>
-            {onCopySteps && (
-              <Button variant="ghost" onClick={onCopySteps} leftIcon={<Copy className="w-4 h-4" />}>
-                Copy Deploy Steps
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+      </div>
 
-      {/* Package preview (collapsible) */}
-      {devicePackage && (!isRaspberryPi || sdWriteComplete) && (
+      {/* Package file preview (collapsible) */}
+      {devicePackage && (
         <div className="mb-8">
           <button
             onClick={() => setShowPackagePreview(!showPackagePreview)}
@@ -275,17 +152,10 @@ export function SuccessStep({
             <div className="flex items-center gap-3">
               <Terminal className="w-5 h-5 text-surface-400" />
               <span className="font-medium text-white">View Generated Files</span>
-              <span className="text-xs text-surface-500">
-                {devicePackage.files.length} files
-              </span>
+              <span className="text-xs text-surface-500">{devicePackage.files.length} files</span>
             </div>
-            {showPackagePreview ? (
-              <ChevronUp className="w-5 h-5 text-surface-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-surface-400" />
-            )}
+            {showPackagePreview ? <ChevronUp className="w-5 h-5 text-surface-400" /> : <ChevronDown className="w-5 h-5 text-surface-400" />}
           </button>
-          
           {showPackagePreview && (
             <div className="mt-4 p-4 rounded-xl bg-surface-900/20 border border-surface-800">
               <PackagePreview
@@ -305,31 +175,32 @@ export function SuccessStep({
         <h3 className="font-semibold text-white mb-4">Next Steps</h3>
         {isRaspberryPi ? (
           <ol className="space-y-4">
-            <NextStepItem number={1} title="Prepare and eject SD card">
-              <p>{sdWriteComplete ? 'SD card is configured. Safely eject it from this computer.' : 'Click “Prepare SD Card”, select your boot partition, and complete the write.'}</p>
+            <NextStepItem number={1} title="Insert SD card and power on">
+              <p>Put the SD card in your Raspberry Pi and power it on. First-boot setup runs automatically (2–5 min).</p>
             </NextStepItem>
-            <NextStepItem number={2} title="Boot your Raspberry Pi">
-              <p>Insert the SD card, power on the Pi, and wait 1-2 minutes for first-boot configuration.</p>
+            <NextStepItem number={2} title="Wait for the tunnel to connect">
+              <p>The Pi will install Docker, cloudflared, and start the printer proxy on first boot.</p>
             </NextStepItem>
             <NextStepItem number={3} title="Access your endpoint">
               <p>
-                Open <a href={`https://${hostname}`} target="_blank" rel="noopener noreferrer" className="text-freemen-400 hover:underline">{`https://${hostname}`}</a> after the Pi is online.
+                Once online, your proxy is available at{' '}
+                <a href={`https://${hostname}`} target="_blank" rel="noopener noreferrer" className="text-freemen-400 hover:underline">
+                  {`https://${hostname}`}
+                </a>
+                . Use the API key above to authenticate.
               </p>
             </NextStepItem>
           </ol>
         ) : (
           <ol className="space-y-4">
             <NextStepItem number={1} title="Transfer files to your device">
-              <p>Copy the downloaded configuration files to your target device</p>
+              <p>Copy the downloaded configuration files to your target device.</p>
             </NextStepItem>
             <NextStepItem number={2} title="Run the setup script">
               <div className="mt-2 p-3 rounded-lg bg-surface-900/80 font-mono text-sm">
                 <div className="flex items-center justify-between">
                   <code className="text-freemen-400">chmod +x setup.sh && ./setup.sh</code>
-                  <button
-                    onClick={() => copyToClipboard('chmod +x setup.sh && ./setup.sh')}
-                    className="p-1.5 hover:bg-surface-700 rounded transition-colors"
-                  >
+                  <button onClick={() => copyToClipboard('chmod +x setup.sh && ./setup.sh')} className="p-1.5 hover:bg-surface-700 rounded transition-colors">
                     <Copy className="w-4 h-4 text-surface-400" />
                   </button>
                 </div>
@@ -337,37 +208,32 @@ export function SuccessStep({
             </NextStepItem>
             <NextStepItem number={3} title="Verify the connection">
               <p>
-                Visit <a href={`https://${hostname}`} target="_blank" rel="noopener noreferrer" className="text-freemen-400 hover:underline">{`https://${hostname}`}</a> to verify your device is accessible
+                Visit{' '}
+                <a href={`https://${hostname}`} target="_blank" rel="noopener noreferrer" className="text-freemen-400 hover:underline">
+                  {`https://${hostname}`}
+                </a>{' '}
+                to verify your device is accessible.
               </p>
             </NextStepItem>
           </ol>
         )}
       </div>
 
-      {/* Documentation link */}
-      <div className="flex items-center justify-between p-4 rounded-xl bg-surface-900/30 border border-surface-800">
+      {/* Docs link */}
+      <div className="flex items-center justify-between p-4 rounded-xl bg-surface-900/30 border border-surface-800 mb-8">
         <div className="flex items-center gap-3">
           <Terminal className="w-5 h-5 text-surface-400" />
           <span className="text-surface-300">Need help? Check the deployment documentation</span>
         </div>
-        <a
-          href="#"
-          className="flex items-center gap-2 text-freemen-400 hover:text-freemen-300 text-sm font-medium"
-        >
+        <a href="#" className="flex items-center gap-2 text-freemen-400 hover:text-freemen-300 text-sm font-medium">
           View Docs <ExternalLink className="w-4 h-4" />
         </a>
       </div>
 
-      {/* New device button */}
-      <div className="mt-8 text-center">
-        <Button variant="ghost" onClick={onNewDevice} disabled={shouldGatePiFinish}>
+      <div className="text-center">
+        <Button variant="ghost" onClick={onNewDevice}>
           Provision Another Device
         </Button>
-        {shouldGatePiFinish && (
-          <p className="text-xs text-surface-500 mt-2">
-            Finish SD card preparation before starting a new device.
-          </p>
-        )}
       </div>
     </div>
   );
