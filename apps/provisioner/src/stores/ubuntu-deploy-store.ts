@@ -7,8 +7,6 @@ import { create } from 'zustand';
 import type {
   DeploymentMode,
   DeploymentPackage,
-  DeploymentStep,
-  DeploymentCommand,
   DeploymentSummary,
   UbuntuDeployConfig,
 } from '../types';

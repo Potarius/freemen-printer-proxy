@@ -199,7 +199,6 @@ interface StepCardProps {
 function StepCard({
   step,
   stepNumber,
-  totalSteps,
   isExpanded,
   copiedCommands,
   onToggle,

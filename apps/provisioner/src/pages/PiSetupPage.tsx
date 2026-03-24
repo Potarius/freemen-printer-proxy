@@ -1,6 +1,16 @@
 /**
  * Raspberry Pi Setup Page
  * Guided wizard for headless Pi configuration
+ *
+ * Steps:
+ *   0 - Intro
+ *   1 - Download OS        ← new
+ *   2 - Flash SD Card
+ *   3 - Configuration
+ *   4 - Network
+ *   5 - Boot Files
+ *   6 - Verify
+ *   7 - Complete
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +19,7 @@ import { Button } from '../components/ui/Button';
 import { usePiSetupStore, PI_SETUP_STEPS } from '../stores/pi-setup-store';
 import {
   PiIntroStep,
+  PiDownloadStep,
   PiFlashStep,
   PiConfigStep,
   PiNetworkStep,
@@ -19,12 +30,14 @@ import {
 
 export function PiSetupPage() {
   const navigate = useNavigate();
-  
+
   const {
     config,
     setupPackage,
     currentStep,
     validationErrors,
+    imagePath,
+    setImagePath,
     setHostname,
     setUsername,
     setPassword,
@@ -48,7 +61,6 @@ export function PiSetupPage() {
   };
 
   const handleStartProvisioning = () => {
-    // Navigate to main provisioning wizard with Pi selected
     navigate('/wizard');
   };
 
@@ -60,11 +72,29 @@ export function PiSetupPage() {
     switch (currentStep) {
       case 0:
         return <PiIntroStep onNext={nextStep} />;
-      
+
       case 1:
-        return <PiFlashStep onNext={nextStep} onBack={handleBack} />;
-      
+        return (
+          <PiDownloadStep
+            onComplete={(path) => {
+              setImagePath(path);
+              nextStep();
+            }}
+            onBack={handleBack}
+          />
+        );
+
       case 2:
+        return (
+          <PiFlashStep
+            imagePath={imagePath}
+            piConfig={null}
+            onNext={nextStep}
+            onBack={prevStep}
+          />
+        );
+
+      case 3:
         return (
           <PiConfigStep
             hostname={config.hostname}
@@ -78,8 +108,8 @@ export function PiSetupPage() {
             onBack={prevStep}
           />
         );
-      
-      case 3:
+
+      case 4:
         return (
           <PiNetworkStep
             wifiSsid={config.wifiSsid || ''}
@@ -91,8 +121,8 @@ export function PiSetupPage() {
             onBack={prevStep}
           />
         );
-      
-      case 4:
+
+      case 5:
         return (
           <PiFilesStep
             setupPackage={setupPackage}
@@ -104,8 +134,8 @@ export function PiSetupPage() {
             onBack={prevStep}
           />
         );
-      
-      case 5:
+
+      case 6:
         return (
           <PiVerifyStep
             config={config}
@@ -114,8 +144,8 @@ export function PiSetupPage() {
             onEdit={goToStep}
           />
         );
-      
-      case 6:
+
+      case 7:
         return (
           <PiCompleteStep
             config={config}
@@ -123,7 +153,7 @@ export function PiSetupPage() {
             onNewSetup={handleNewSetup}
           />
         );
-      
+
       default:
         return null;
     }
@@ -155,7 +185,7 @@ export function PiSetupPage() {
             </div>
           </div>
 
-          {/* Progress indicator */}
+          {/* Progress dots */}
           <div className="flex items-center gap-2">
             {PI_SETUP_STEPS.map((step, index) => (
               <div

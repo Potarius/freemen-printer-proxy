@@ -4,13 +4,12 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { 
-  Zap, 
-  Server, 
-  Globe, 
-  ArrowRight, 
+import {
+  Zap,
+  Server,
+  Globe,
+  ArrowRight,
   Printer,
-  Cpu,
   Monitor,
   Sparkles,
   Shield,
@@ -74,17 +73,10 @@ export function HomePage() {
           <QuickActionCard
             icon={<Zap className="w-6 h-6" />}
             title="New Provision"
-            description="Configure a device with Cloudflare Tunnel"
+            description="Flash SD card, configure Pi, set up Cloudflare Tunnel — all in one wizard"
             color="freemen"
             onClick={() => navigate('/wizard')}
             primary
-          />
-          <QuickActionCard
-            icon={<Cpu className="w-6 h-6" />}
-            title="Raspberry Pi"
-            description="Headless setup for Raspberry Pi"
-            color="pink"
-            onClick={() => navigate('/pi-setup')}
           />
           <QuickActionCard
             icon={<Monitor className="w-6 h-6" />}
@@ -137,10 +129,10 @@ export function HomePage() {
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { step: 1, title: 'Connect', desc: 'Enter your Cloudflare API token' },
-            { step: 2, title: 'Configure', desc: 'Select domain and hostname' },
-            { step: 3, title: 'Create', desc: 'Auto-generate Cloudflare Tunnel' },
-            { step: 4, title: 'Deploy', desc: 'Download config for your device' },
+            { step: 1, title: 'Flash',     desc: 'Download OS and write to SD card' },
+            { step: 2, title: 'Configure', desc: 'Set hostname, password, and WiFi' },
+            { step: 3, title: 'Tunnel',    desc: 'Auto-create Cloudflare Tunnel' },
+            { step: 4, title: 'Boot',      desc: 'Insert card — Pi connects automatically' },
           ].map((item, index) => (
             <div key={item.step} className="relative">
               {index < 3 && (
@@ -165,7 +157,7 @@ interface QuickActionCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  color: 'freemen' | 'pink' | 'orange' | 'purple';
+  color: 'freemen' | 'orange' | 'purple';
   onClick: () => void;
   primary?: boolean;
 }
@@ -173,14 +165,12 @@ interface QuickActionCardProps {
 function QuickActionCard({ icon, title, description, color, onClick, primary }: QuickActionCardProps) {
   const colorStyles = {
     freemen: 'from-freemen-500/20 to-freemen-600/20 border-freemen-500/20 hover:border-freemen-500/40',
-    pink: 'from-pink-500/20 to-rose-500/20 border-pink-500/20 hover:border-pink-500/40',
     orange: 'from-orange-500/20 to-amber-500/20 border-orange-500/20 hover:border-orange-500/40',
     purple: 'from-purple-500/20 to-indigo-500/20 border-purple-500/20 hover:border-purple-500/40',
   };
 
   const iconColors = {
     freemen: 'text-freemen-400 bg-freemen-500/20',
-    pink: 'text-pink-400 bg-pink-500/20',
     orange: 'text-orange-400 bg-orange-500/20',
     purple: 'text-purple-400 bg-purple-500/20',
   };

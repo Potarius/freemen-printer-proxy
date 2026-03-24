@@ -170,6 +170,7 @@ export interface DevicePackageConfig {
   zoneId: string;
   zoneName: string;
   servicePort: number;
+  apiKey: string;
   printerIp?: string;
   printerPort?: number;
 }

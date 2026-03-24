@@ -26,33 +26,13 @@ export interface PackageWriteResult {
 // TAURI API DETECTION
 // ============================================
 
-declare global {
-  interface Window {
-    __TAURI__?: {
-      fs: {
-        createDir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
-        writeTextFile: (path: string, contents: string) => Promise<void>;
-        readTextFile: (path: string) => Promise<string>;
-        exists: (path: string) => Promise<boolean>;
-      };
-      path: {
-        appDataDir: () => Promise<string>;
-        documentDir: () => Promise<string>;
-        homeDir: () => Promise<string>;
-        join: (...paths: string[]) => Promise<string>;
-      };
-      shell: {
-        open: (path: string) => Promise<void>;
-      };
-      clipboard: {
-        writeText: (text: string) => Promise<void>;
-      };
-    };
-  }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getTauri(): any {
+  return (window as any).__TAURI__;
 }
 
 function isTauri(): boolean {
-  return typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+  return typeof window !== 'undefined' && getTauri() !== undefined;
 }
 
 // ============================================
@@ -70,10 +50,10 @@ export class FileOperationsService {
       return this.outputBaseDir;
     }
 
-    if (isTauri() && window.__TAURI__) {
+    if (isTauri() && getTauri()) {
       try {
-        const docDir = await window.__TAURI__.path.documentDir();
-        this.outputBaseDir = await window.__TAURI__.path.join(docDir, 'Freemen Provisioner', 'output');
+        const docDir = await getTauri().path.documentDir();
+        this.outputBaseDir = await getTauri().path.join(docDir, 'Freemen Provisioner', 'output');
       } catch {
         this.outputBaseDir = './output';
       }
@@ -89,10 +69,7 @@ export class FileOperationsService {
    * Write a device package to disk
    */
   async writePackage(pkg: DevicePackage): Promise<PackageWriteResult> {
-    const errors: string[] = [];
-    let filesWritten = 0;
-
-    if (isTauri() && window.__TAURI__) {
+    if (isTauri() && getTauri()) {
       return this.writePackageTauri(pkg);
     } else {
       // Browser fallback - create downloadable content
@@ -109,16 +86,16 @@ export class FileOperationsService {
 
     try {
       const baseDir = await this.getOutputDirectory();
-      const packageDir = await window.__TAURI__!.path.join(baseDir, pkg.id);
+      const packageDir = await getTauri().path.join(baseDir, pkg.id);
 
       // Create package directory
-      await window.__TAURI__!.fs.createDir(packageDir, { recursive: true });
+      await getTauri().fs.createDir(packageDir, { recursive: true });
 
       // Write each file
       for (const file of pkg.files) {
         try {
-          const filePath = await window.__TAURI__!.path.join(packageDir, file.relativePath);
-          await window.__TAURI__!.fs.writeTextFile(filePath, file.content);
+          const filePath = await getTauri().path.join(packageDir, file.relativePath);
+          await getTauri().fs.writeTextFile(filePath, file.content);
           filesWritten++;
         } catch (err) {
           errors.push(`Failed to write ${file.name}: ${(err as Error).message}`);
@@ -226,7 +203,6 @@ cd "$PACKAGE_DIR"
 
     // Embed each file using heredoc
     for (const file of files) {
-      const escapedContent = file.content.replace(/\\/g, '\\\\').replace(/\$/g, '\\$');
       script += `
 # --- ${file.name} ---
 cat > '${file.relativePath}' << 'FREEMEN_EOF_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}'
@@ -256,9 +232,9 @@ echo "Next step: cd $PACKAGE_DIR && sudo ./setup.sh"
    * Open folder in system file explorer
    */
   async openFolder(path: string): Promise<boolean> {
-    if (isTauri() && window.__TAURI__) {
+    if (isTauri() && getTauri()) {
       try {
-        await window.__TAURI__.shell.open(path);
+        await getTauri().shell.open(path);
         return true;
       } catch (err) {
         console.error('Failed to open folder:', err);
@@ -275,9 +251,9 @@ echo "Next step: cd $PACKAGE_DIR && sudo ./setup.sh"
    * Copy text to clipboard
    */
   async copyToClipboard(text: string): Promise<boolean> {
-    if (isTauri() && window.__TAURI__) {
+    if (isTauri() && getTauri()) {
       try {
-        await window.__TAURI__.clipboard.writeText(text);
+        await getTauri().clipboard.writeText(text);
         return true;
       } catch {
         // Fallback to browser API

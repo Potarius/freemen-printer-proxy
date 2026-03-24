@@ -3,6 +3,7 @@
  */
 
 export { PiIntroStep } from './PiIntroStep';
+export { PiDownloadStep } from './PiDownloadStep';
 export { PiFlashStep } from './PiFlashStep';
 export { PiConfigStep } from './PiConfigStep';
 export { PiNetworkStep } from './PiNetworkStep';

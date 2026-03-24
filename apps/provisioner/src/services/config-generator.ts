@@ -27,7 +27,7 @@ export class ConfigGeneratorService {
     deviceId: string,
     name: string,
     platform: TargetPlatform,
-    cloudflare: CloudflareTunnelConfig
+    _cloudflare: CloudflareTunnelConfig
   ): DeviceConfig {
     return {
       id: deviceId,

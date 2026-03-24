@@ -81,7 +81,7 @@ export function ProvisionStep({ tasks, currentTask, error }: ProvisionStepProps)
   );
 }
 
-function TaskItem({ task, isCurrent }: { task: ProvisionTask; isCurrent: boolean }) {
+function TaskItem({ task }: { task: ProvisionTask; isCurrent: boolean }) {
   const getIcon = () => {
     switch (task.status) {
       case 'success':

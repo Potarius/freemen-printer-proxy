@@ -77,7 +77,7 @@
       }
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://api.cloudflare.com https://*.cloudflare.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' https://api.cloudflare.com https://*.cloudflare.com https://downloads.raspberrypi.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
     },
     "updater": {
       "active": false

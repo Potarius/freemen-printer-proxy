@@ -138,7 +138,7 @@ export class PiSetupService {
   /**
    * Encrypt password using SHA-512 (simplified - real impl needs openssl)
    */
-  private encryptPassword(password: string): string {
+  private encryptPassword(_password: string): string {
     // This is a placeholder - in production, use:
     // echo 'password' | openssl passwd -6 -stdin
     // For now, return a marker that needs to be replaced
@@ -467,17 +467,6 @@ For help, visit: https://github.com/Potarius/freemen-printer-proxy
 // SD CARD DETECTION (Windows)
 // ============================================
 
-declare global {
-  interface Window {
-    __TAURI__?: {
-      shell: {
-        Command: new (cmd: string, args?: string[]) => {
-          execute: () => Promise<{ code: number; stdout: string; stderr: string }>;
-        };
-      };
-    };
-  }
-}
 
 export async function detectRemovableDrives(): Promise<DetectedDrive[]> {
   // This would use Tauri to run Windows commands
@@ -489,7 +478,8 @@ export async function detectRemovableDrives(): Promise<DetectedDrive[]> {
 
   try {
     // Use PowerShell to detect removable drives
-    const Command = window.__TAURI__.shell.Command;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Command = (window as any).__TAURI__.shell.Command;
     const cmd = new Command('powershell', [
       '-Command',
       'Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 2} | Select-Object DeviceID, VolumeName, Size, FreeSpace | ConvertTo-Json'

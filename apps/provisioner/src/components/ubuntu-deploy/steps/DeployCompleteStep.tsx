@@ -23,7 +23,6 @@ interface DeployCompleteStepProps {
 }
 
 export function DeployCompleteStep({
-  deploymentPackage,
   config,
   onNewDeployment,
 }: DeployCompleteStepProps) {

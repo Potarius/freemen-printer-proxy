@@ -10,7 +10,7 @@ import type {
   DevicePackageFile,
   TargetPlatform,
 } from '../types';
-import { DevicePackageGenerator, getDevicePackageGenerator } from '../services/device-package-generator';
+import { getDevicePackageGenerator } from '../services/device-package-generator';
 import { getFileOperationsService, type PackageWriteResult } from '../services/file-operations';
 
 // ============================================
@@ -198,6 +198,7 @@ export function createPackageConfig(
   accountId: string,
   zoneId: string,
   zoneName: string,
+  apiKey: string,
   printerIp?: string,
   printerPort?: number
 ): DevicePackageConfig {
@@ -213,6 +214,7 @@ export function createPackageConfig(
     zoneId,
     zoneName,
     servicePort: 6500,
+    apiKey,
     printerIp,
     printerPort,
   };

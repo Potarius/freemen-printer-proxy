@@ -16,7 +16,6 @@ import {
   detectRemovableDrives,
   isPiBootPartition,
 } from '../services/pi-setup-service';
-import { getFileOperationsService } from '../services/file-operations';
 
 // ============================================
 // TYPES
@@ -48,7 +47,10 @@ export interface PiSetupState {
   
   // Device package integration
   devicePackagePath: string | null;
-  
+
+  // Downloaded OS image path (set by PiDownloadStep, consumed by PiFlashStep)
+  imagePath: string | null;
+
   // Actions
   setConfig: (config: Partial<PiSetupConfig>) => void;
   setHostname: (hostname: string) => void;
@@ -69,6 +71,7 @@ export interface PiSetupState {
   copyToClipboard: (text: string) => Promise<boolean>;
   
   setDevicePackagePath: (path: string | null) => void;
+  setImagePath: (path: string | null) => void;
   
   nextStep: () => void;
   prevStep: () => void;
@@ -96,6 +99,7 @@ const initialState = {
   isWriting: false,
   error: null,
   devicePackagePath: null,
+  imagePath: null,
 };
 
 // ============================================
@@ -218,7 +222,7 @@ export const usePiSetupStore = create<PiSetupState>((set, get) => ({
     set({ selectedDrive: drive });
   },
 
-  writeToPath: async (path: string): Promise<boolean> => {
+  writeToPath: async (_path: string): Promise<boolean> => {
     const { setupPackage } = get();
     if (!setupPackage) {
       set({ error: 'No package to write' });
@@ -228,8 +232,6 @@ export const usePiSetupStore = create<PiSetupState>((set, get) => ({
     set({ isWriting: true, error: null });
 
     try {
-      const fileOps = getFileOperationsService();
-      
       // Write each boot file
       for (const file of setupPackage.bootFiles) {
         if (file.required || file.content) {
@@ -304,9 +306,13 @@ export const usePiSetupStore = create<PiSetupState>((set, get) => ({
     set({ devicePackagePath: path });
   },
 
+  setImagePath: (path: string | null) => {
+    set({ imagePath: path });
+  },
+
   nextStep: () => {
     set((state) => ({
-      currentStep: Math.min(state.currentStep + 1, 6),
+      currentStep: Math.min(state.currentStep + 1, 7),
     }));
   },
 
@@ -317,7 +323,7 @@ export const usePiSetupStore = create<PiSetupState>((set, get) => ({
   },
 
   goToStep: (step: number) => {
-    set({ currentStep: Math.max(0, Math.min(step, 6)) });
+    set({ currentStep: Math.max(0, Math.min(step, 7)) });
   },
 
   markStepComplete: (stepId: string) => {
@@ -348,9 +354,14 @@ export const PI_SETUP_STEPS = [
     description: 'Overview of the setup process',
   },
   {
+    id: 'download',
+    title: 'Download OS',
+    description: 'Download Raspberry Pi OS Lite',
+  },
+  {
     id: 'flash',
     title: 'Flash SD Card',
-    description: 'Download and flash Raspberry Pi OS',
+    description: 'Write the OS image to your SD card',
   },
   {
     id: 'config',
@@ -365,7 +376,7 @@ export const PI_SETUP_STEPS = [
   {
     id: 'files',
     title: 'Boot Files',
-    description: 'Generate and copy boot files',
+    description: 'Write SSH and setup files to SD card',
   },
   {
     id: 'verify',

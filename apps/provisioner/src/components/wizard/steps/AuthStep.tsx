@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { KeyRound, ExternalLink, CheckCircle } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
-import { Alert } from '../../ui/Alert';
 
 interface AuthStepProps {
   value: string;

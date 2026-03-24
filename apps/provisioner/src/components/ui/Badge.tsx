@@ -10,9 +10,10 @@ export interface BadgeProps {
   variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
   size?: 'sm' | 'md';
   dot?: boolean;
+  className?: string;
 }
 
-export function Badge({ children, variant = 'default', size = 'sm', dot }: BadgeProps) {
+export function Badge({ children, variant = 'default', size = 'sm', dot, className }: BadgeProps) {
   const variants = {
     default: 'bg-surface-700 text-surface-300',
     success: 'bg-green-500/20 text-green-400',
@@ -31,7 +32,8 @@ export function Badge({ children, variant = 'default', size = 'sm', dot }: Badge
       className={clsx(
         'inline-flex items-center gap-1.5 rounded-full font-medium',
         variants[variant],
-        sizes[size]
+        sizes[size],
+        className
       )}
     >
       {dot && (

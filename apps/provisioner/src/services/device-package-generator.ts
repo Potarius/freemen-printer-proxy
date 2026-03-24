@@ -4,7 +4,6 @@
  */
 
 import type {
-  TargetPlatform,
   DevicePackageConfig,
   DevicePackageFile,
   DevicePackage,
@@ -126,7 +125,7 @@ export class DevicePackageGenerator {
       '',
       '# Service Configuration',
       `PORT=${config.servicePort || DEFAULT_SERVICE_PORT}`,
-      'API_KEY=${API_KEY:-change-me-in-production}',
+      `API_KEY=${config.apiKey}`,
       '',
       '# Cloudflare Tunnel',
       `TUNNEL_TOKEN=${config.tunnelToken}`,
@@ -219,7 +218,7 @@ networks:
   /**
    * docker-compose.override.yml - Local overrides
    */
-  private generateDockerComposeOverride(config: DevicePackageConfig): DevicePackageFile {
+  private generateDockerComposeOverride(_config: DevicePackageConfig): DevicePackageFile {
     const content = `# ============================================
 # Freemen Printer Proxy - Docker Compose Override
 # ============================================

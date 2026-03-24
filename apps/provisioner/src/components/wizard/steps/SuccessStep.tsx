@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { CheckCircle, Download, ExternalLink, Copy, Terminal, FolderOpen, ChevronDown, ChevronUp, HardDrive, Zap } from 'lucide-react';
+import { CheckCircle, Download, ExternalLink, Copy, Terminal, FolderOpen, ChevronDown, ChevronUp, HardDrive, Zap, AlertTriangle } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { PackagePreview } from '../PackagePreview';
 import { SDWriteWizard } from '../../sd-write';
@@ -15,6 +15,7 @@ interface SuccessStepProps {
   hostname: string;
   tunnelName: string;
   tunnelToken?: string;
+  proxyApiKey: string;
   deviceId: string;
   devicePackage?: DevicePackage | null;
   outputPath?: string;
@@ -30,6 +31,7 @@ export function SuccessStep({
   hostname,
   tunnelName,
   tunnelToken,
+  proxyApiKey,
   deviceId,
   devicePackage,
   outputPath,
@@ -133,6 +135,40 @@ export function SuccessStep({
               )}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* API Key — must be copied now */}
+      {proxyApiKey && (
+        <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/40 mb-8">
+          <div className="flex items-start gap-3 mb-4">
+            <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-yellow-300 mb-1">Save your API Key now</h3>
+              <p className="text-sm text-yellow-200/70">
+                This key authenticates requests to your printer proxy. It is embedded in the device config and will not be shown again. Store it in your cloud server or ERP as the <code className="bg-yellow-500/20 px-1 rounded text-yellow-300">x-api-key</code> header value.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-surface-950 border border-yellow-500/30">
+            <code className="flex-1 font-mono text-sm text-yellow-300 break-all select-all">
+              {proxyApiKey}
+            </code>
+            <button
+              onClick={() => copyToClipboard(proxyApiKey, 'apiKey')}
+              className="flex-shrink-0 p-2 hover:bg-surface-800 rounded-lg transition-colors"
+              title="Copy API key"
+            >
+              {copiedText === 'apiKey' ? (
+                <CheckCircle className="w-4 h-4 text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4 text-yellow-400" />
+              )}
+            </button>
+          </div>
+          {copiedText === 'apiKey' && (
+            <p className="text-xs text-green-400 mt-2 text-right">Copied to clipboard</p>
+          )}
         </div>
       )}
 
