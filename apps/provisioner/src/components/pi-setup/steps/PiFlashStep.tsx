@@ -228,11 +228,22 @@ set_status "UPDATING_SYSTEM"
 apt-get update -q && log "apt-get update done" || { set_status "ERROR_APT_UPDATE"; log "ERROR: apt-get update failed"; exit 1; }
 apt-get install -y -q curl ca-certificates && log "packages installed" || { set_status "ERROR_APT_INSTALL"; log "ERROR: apt install failed"; exit 1; }
 
-# 3. Docker
+# 3. Docker (via official Docker apt repository — more reliable than get.docker.com)
 set_status "INSTALLING_DOCKER"
 if ! command -v docker >/dev/null 2>&1; then
-    log "Installing Docker..."
-    curl -fsSL https://get.docker.com | sh && log "Docker installed" || { set_status "ERROR_DOCKER_INSTALL"; log "ERROR: Docker install failed"; exit 1; }
+    log "Installing Docker via apt repository..."
+    apt-get install -y -q ca-certificates curl gnupg && log "prereqs ok" || { set_status "ERROR_DOCKER_PREREQS"; log "ERROR: prereq install failed"; exit 1; }
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    ARCH=$(dpkg --print-architecture)
+    CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+    echo "deb [arch=\${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \${CODENAME} stable" | \\
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt-get update -q
+    apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \\
+        && log "Docker CE installed" \\
+        || { set_status "ERROR_DOCKER_INSTALL"; log "ERROR: Docker install failed"; exit 1; }
     usermod -aG docker "${cfg.username}"
     systemctl enable docker
     systemctl start docker
@@ -284,7 +295,7 @@ Requires=docker.service
 
 [Service]
 WorkingDirectory=/opt/freemen-printer-proxy
-ExecStart=/usr/bin/docker compose up
+ExecStart=/usr/bin/docker compose up --remove-orphans
 ExecStop=/usr/bin/docker compose down
 Restart=always
 
