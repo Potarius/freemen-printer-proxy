@@ -174,8 +174,8 @@ SERVICE_EOF
 
 systemctl enable freemen-install.service && log "freemen-install.service enabled" || log "WARNING: service enable failed"
 
-# 5. Clean up cmdline.txt so firstrun.sh doesn't run again
-sed -i 's| systemd.run=[^ ]*firstrun.sh[^ ]*||g' "$BOOT_MOUNT/cmdline.txt" 2>/dev/null || true
+# 5. Clean up cmdline.txt — remove ALL three firstrun params to prevent reboot loop
+sed -i 's| systemd\\.run=[^ ]*||g; s| systemd\\.run_success_action=[^ ]*||g; s| systemd\\.unit=[^ ]*||g' "$BOOT_MOUNT/cmdline.txt" 2>/dev/null || true
 rm -f "$BOOT_MOUNT/freemen-install.sh"
 
 set_status "FIRSTRUN_COMPLETE_REBOOTING"
