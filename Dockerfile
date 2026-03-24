@@ -7,7 +7,7 @@ FROM node:20-alpine
 LABEL org.opencontainers.image.title="Freemen Printer Proxy"
 LABEL org.opencontainers.image.description="Local proxy for Brother QL/TD label printers"
 LABEL org.opencontainers.image.vendor="Freemen Solutions"
-LABEL org.opencontainers.image.source="https://github.com/freemen-solutions/freemen-printer-proxy"
+LABEL org.opencontainers.image.source="https://github.com/Potarius/freemen-printer-proxy"
 
 WORKDIR /app
 

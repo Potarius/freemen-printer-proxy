@@ -20,6 +20,86 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 // ============================================
+// SELF-ELEVATION  (release builds only)
+//
+// The NSIS installer launches the app as the current user via ShellExecAsUser.
+// Rather than baking requireAdministrator into the manifest (which causes a
+// hidden UAC dialog that the user misses), we start as asInvoker, check for
+// elevation at runtime, and relaunch with the "runas" verb if needed.
+// In debug/dev builds this is skipped so `tauri dev` never triggers UAC.
+// ============================================
+
+#[cfg(all(target_os = "windows", not(debug_assertions)))]
+fn relaunch_as_admin_if_needed() {
+    use std::ffi::{c_void, OsStr};
+    use std::os::windows::ffi::OsStrExt;
+
+    extern "system" {
+        fn OpenProcessToken(process: *mut c_void, access: u32, token: *mut *mut c_void) -> i32;
+        fn GetCurrentProcess() -> *mut c_void;
+        fn GetTokenInformation(
+            token: *mut c_void,
+            class: u32,
+            info: *mut c_void,
+            len: u32,
+            ret_len: *mut u32,
+        ) -> i32;
+        fn CloseHandle(h: *mut c_void) -> i32;
+        fn ShellExecuteW(
+            hwnd: *mut c_void,
+            op: *const u16,
+            file: *const u16,
+            params: *const u16,
+            dir: *const u16,
+            show: i32,
+        ) -> isize;
+    }
+
+    const TOKEN_QUERY: u32 = 0x0008;
+    const TOKEN_ELEVATION: u32 = 20;
+    const SW_SHOWNORMAL: i32 = 1;
+
+    unsafe {
+        let mut token: *mut c_void = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return; // Cannot query — proceed as-is
+        }
+        let mut elevation: u32 = 0;
+        let mut ret_len: u32 = 0;
+        let ok = GetTokenInformation(
+            token,
+            TOKEN_ELEVATION,
+            &mut elevation as *mut _ as *mut c_void,
+            4,
+            &mut ret_len,
+        );
+        CloseHandle(token);
+        if ok != 0 && elevation != 0 {
+            return; // Already elevated — proceed normally
+        }
+
+        // Not elevated: relaunch with "runas" verb to trigger UAC
+        let exe = match std::env::current_exe() {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        let exe_w: Vec<u16> = OsStr::new(&exe).encode_wide().chain(Some(0)).collect();
+        let verb_w: Vec<u16> = OsStr::new("runas").encode_wide().chain(Some(0)).collect();
+
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            verb_w.as_ptr(),
+            exe_w.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            SW_SHOWNORMAL,
+        );
+    }
+
+    std::process::exit(0);
+}
+
+// ============================================
 // WINDOWS VOLUME LOCKING  (Rufus-style)
 //
 // Volumes must be locked and dismounted from the SAME PROCESS that writes
@@ -890,6 +970,9 @@ Write-Output "OK"
 // ============================================
 
 fn main() {
+    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    relaunch_as_admin_if_needed();
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             // HTTP proxy

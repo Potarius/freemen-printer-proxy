@@ -45,10 +45,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/freemen-solutions/freemen-printer-proxy"
+    "url": "https://github.com/Potarius/freemen-printer-proxy"
   },
   "homepage": "https://freemen.solutions",
   "bugs": {
-    "url": "https://github.com/freemen-solutions/freemen-printer-proxy/issues"
+    "url": "https://github.com/Potarius/freemen-printer-proxy/issues"
   }
 }

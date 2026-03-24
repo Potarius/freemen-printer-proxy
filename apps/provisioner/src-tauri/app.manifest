@@ -22,8 +22,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>
-        <!-- Require UAC elevation on every launch so raw disk writes work -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+        <!-- App self-elevates at startup via ShellExecuteW "runas" when needed -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
       </requestedPrivileges>
     </security>
   </trustInfo>
